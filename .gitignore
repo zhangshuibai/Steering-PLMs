@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+# Large cached features (can be regenerated)
+saved_predictors/features/
+saved_predictors/therm_features_nocdhit/
+
+# Large raw meltome data (can be re-downloaded)
+data/meltome/meltome_raw_all.csv
+data/meltome/supplementary_table*.xlsx

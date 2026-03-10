@@ -66,6 +66,10 @@ python3 steering_esm3_optimization.py --property "sol" --data_path "data/sol_eas
 python3 steering_esm3_optimization.py --property "sol" --data_path "data/sol_hard.csv" --output_file "results/ESM3_opt_sol_hard.csv"  --n 100 --round 8 --T 2
 ```
 
+## Pipeline Walkthrough
+
+See [PIPELINE.md](PIPELINE.md) for a detailed step-by-step walkthrough of the solubility steering experiment, including code-level explanations, data flow diagrams, and reproduction results.
+
 ## Citation
 
 If you find this code useful for your research, please cite our paper:
