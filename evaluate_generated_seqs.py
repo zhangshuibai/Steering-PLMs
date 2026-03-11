@@ -101,7 +101,11 @@ if __name__ == "__main__":
     # --- Load and run predictor ---
     print(f"Loading predictor from {args.predictor_path}")
     predictor = PropertyPredictor(embed_dim=1280)
-    predictor.load_state_dict(torch.load(args.predictor_path, map_location='cpu'))
+    ckpt = torch.load(args.predictor_path, map_location='cpu')
+    if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
+        predictor.load_state_dict(ckpt['model_state_dict'])
+    else:
+        predictor.load_state_dict(ckpt)
     predictor = predictor.to(args.device)
     predictor.eval()
 

@@ -327,6 +327,36 @@ if __name__ == "__main__":
     print(f"Acc={acc:.4f}  Prec={prec:.4f}  Rec={rec:.4f}  F1={f1:.4f}")
     print(f"Target: Acc>=0.708, F1>=0.677")
 
-    # --- Save ---
-    torch.save(predictor.state_dict(), args.save_path)
+    # --- Save model + config ---
+    import json
+    config = {
+        'args': vars(args),
+        'architecture': args.head,
+        'embed_dim': 1280,
+        'esm_model': 'esm2_t33_650M_UR50D',
+        'feature_layer': 'last' if args.last_n_layers == 1 else f'last_{args.last_n_layers}_avg',
+        'loss': 'BCEWithLogitsLoss',
+        'data': {
+            'source': 'DeepSol (khurana2018deepsol)',
+            'train_size': len(all_train_labels),
+            'val_size': len(eval_labels),
+            'test_size': len(test_labels_np),
+            'merge_train_val': args.merge_train_val,
+        },
+        'test_metrics': {
+            'accuracy': float(acc),
+            'precision': float(prec),
+            'recall': float(rec),
+            'f1': float(f1),
+        },
+    }
+    torch.save({
+        'model_state_dict': predictor.state_dict(),
+        'config': config,
+    }, args.save_path)
+
+    config_path = args.save_path.replace('.pt', '_config.json')
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
     print(f"\nPredictor saved to {args.save_path}")
+    print(f"Config saved to {config_path}")

@@ -8,3 +8,14 @@ saved_predictors/therm_features_nocdhit/
 # Large raw meltome data (can be re-downloaded)
 data/meltome/meltome_raw_all.csv
 data/meltome/supplementary_table*.xlsx
+
+# Large activation data (2.2TB, can be regenerated)
+data/esm2_650m_layer17_uniref50/
+data/uniref50/
+
+# GLP training runs and wandb logs
+generative_latent_prior/runs/
+generative_latent_prior/wandb/
+
+# Misc logs
+upload.log

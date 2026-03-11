@@ -1,0 +1,60 @@
+# =============================================================================
+# GLP Training Config for ESM2-650M Layer 17
+# =============================================================================
+# python3 glp_train.py config=configs/train_esm2_650m_layer17.yaml
+#
+# ESM2-650M: 33 layers, hidden_dim=1280
+# Layer 17: steering 效果最佳层 (sol=32%, pPPL=7.01)
+# =============================================================================
+
+save_root: /volume/demo/xlzhuang/MOE/Steering-PLMs/generative_latent_prior
+model_name: esm2_t33_650M_UR50D
+run_name: glp-esm2-650m-layer17-d6
+output_path: ${save_root}/runs/${run_name}
+
+# wandb — 在网页端查看训练曲线和 eval metrics
+wandb_enabled: True
+wandb_project: glp-protein-steering
+wandb_run_name: ${run_name}
+
+# data
+train_dataset: /volume/demo/xlzhuang/MOE/Steering-PLMs/data/esm2_650m_layer17_uniref50
+rep_statistic: ${train_dataset}/rep_statistics.pt
+num_epochs: 1
+save_epochs: [1]
+shuffle: True
+
+# model
+glp_kwargs:
+  normalizer_config:
+    rep_statistic: ${rep_statistic}
+  denoiser_config:
+    d_input: 1280     # ESM2-650M hidden dim
+    d_model: 2560     # 2 × d_input
+    d_mlp: 5120       # 4 × d_input
+    n_layers: 6       # denoiser depth
+    multi_layer_n_layers: null
+  tracedict_config:
+    layer_prefix: "layers"
+    layers: [17]
+    retain: "output"
+
+# training
+use_bf16: True
+learning_rate: 5e-5
+batch_size: 16384
+gradient_accumulation_steps: 1
+gradient_clipping_threshold: 1
+log_every_n_steps: 10
+save_every_n_steps: 5000
+save_opt_state: True
+lr_scheduler:
+  scheduler_cls: cosine_scheduler_with_warmup
+  warmup_ratio: 0.01
+  initial_factor: 0.01
+  final_factor: 0.1
+
+# eval — 每 2000 步评估 NLL / FID / MMD
+eval_every_n_steps: 2000
+eval_n_samples: 8192
+eval_num_timesteps: 20

@@ -469,7 +469,42 @@ if __name__ == "__main__":
     print(f"  Spearman ρ={rho:.4f} (p={pval:.2e})  MAE={mae:.2f}°C  RMSE={rmse:.2f}°C")
     print(f"  Target: Spearman ρ >= 0.76")
 
-    # --- Save ---
-    torch.save(predictor.state_dict(), args.save_path)
+    # --- Save model + config ---
+    import json
+    config = {
+        'args': vars(args),
+        'architecture': args.head,
+        'embed_dim': 1280,
+        'esm_model': 'esm2_t33_650M_UR50D',
+        'feature_layer': 'last' if args.last_n_layers == 1 else f'last_{args.last_n_layers}_avg',
+        'loss': 'MSELoss',
+        'data': {
+            'source': 'Meltome Atlas (dataset_esm_temp.csv)',
+            'train_size': len(train_seqs),
+            'val_size': len(val_seqs),
+            'test_size': len(test_seqs),
+            'skip_cdhit': args.skip_cdhit,
+            'no_val': args.no_val,
+        },
+        'val_metrics': {
+            'spearman_rho': float(rho_val),
+            'mae': float(mae_val),
+        },
+        'test_metrics': {
+            'spearman_rho': float(rho),
+            'spearman_pval': float(pval),
+            'mae': float(mae),
+            'rmse': float(rmse),
+        },
+    }
+    torch.save({
+        'model_state_dict': predictor.state_dict(),
+        'config': config,
+    }, args.save_path)
+
+    config_path = args.save_path.replace('.pt', '_config.json')
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
     print(f"\nPredictor saved to {args.save_path}")
+    print(f"Config saved to {config_path}")
     print("=" * 60)
