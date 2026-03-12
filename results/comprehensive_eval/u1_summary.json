@@ -1,0 +1,62 @@
+[
+  {
+    "method": "L17+GLP(u=1.0,s=25)",
+    "csv_path": "results/comprehensive_eval/glp/u1.0_steps25.csv",
+    "sol_ratio": 0.26,
+    "sol_mean_prob": 0.3041784167289734,
+    "n_seqs": 100,
+    "u": 1.0,
+    "steps": 25,
+    "ppl_mean": 7.435042719883134,
+    "ppl_median": 6.400401291130217,
+    "ppl_std": 3.6761686919800107
+  },
+  {
+    "method": "L17+GLP(u=1.0,s=50)",
+    "csv_path": "results/comprehensive_eval/glp/u1.0_steps50.csv",
+    "sol_ratio": 0.22,
+    "sol_mean_prob": 0.27270498871803284,
+    "n_seqs": 100,
+    "u": 1.0,
+    "steps": 50,
+    "ppl_mean": 7.2227207344805615,
+    "ppl_median": 6.341123762254527,
+    "ppl_std": 3.4178704124563017
+  },
+  {
+    "method": "L17+GLP(u=1.0,s=100)",
+    "csv_path": "results/comprehensive_eval/glp/u1.0_steps100.csv",
+    "sol_ratio": 0.28,
+    "sol_mean_prob": 0.2820119261741638,
+    "n_seqs": 100,
+    "u": 1.0,
+    "steps": 100,
+    "ppl_mean": 7.2135086545511236,
+    "ppl_median": 6.211300889170557,
+    "ppl_std": 3.3511914714426894
+  },
+  {
+    "method": "L17+GLP(u=1.0,s=200)",
+    "csv_path": "results/comprehensive_eval/glp/u1.0_steps200.csv",
+    "sol_ratio": 0.25,
+    "sol_mean_prob": 0.2748647928237915,
+    "n_seqs": 100,
+    "u": 1.0,
+    "steps": 200,
+    "ppl_mean": 7.3157342842833915,
+    "ppl_median": 6.4008809352069855,
+    "ppl_std": 3.3633824517762756
+  },
+  {
+    "method": "L17+GLP(u=1.0,s=400)",
+    "csv_path": "results/comprehensive_eval/glp/u1.0_steps400.csv",
+    "sol_ratio": 0.27,
+    "sol_mean_prob": 0.2964012026786804,
+    "n_seqs": 100,
+    "u": 1.0,
+    "steps": 400,
+    "ppl_mean": 7.304649376376341,
+    "ppl_median": 6.145166059062824,
+    "ppl_std": 3.4717671029745545
+  }
+]

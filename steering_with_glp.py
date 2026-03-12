@@ -48,6 +48,8 @@ sys.stderr.reconfigure(line_buffering=True)
 def build_glp_projection_fn(glp_model, u=0.5, num_timesteps=20):
     """Build a function that projects activations on-manifold using GLP."""
     scheduler = glp_model.scheduler
+    # 关键: 先设置 timesteps, 确保 fm_prepare 和 sample_on_manifold 用同一个 schedule
+    scheduler.set_timesteps(num_timesteps)
 
     def project_on_manifold(acts):
         """

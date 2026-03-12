@@ -1,0 +1,19 @@
+{
+  "experiment": "steering_with_glp",
+  "glp_path": "generative_latent_prior/runs/glp-esm2-650m-layer17-d6",
+  "u": 0.7,
+  "num_timesteps": 1000,
+  "glp_layer": 17,
+  "n_gen": 100,
+  "results": [
+    {
+      "method": "L17+GLP(u=0.7)",
+      "csv_path": "results/steering_with_glp/L17_glp_u0.7.csv",
+      "sol_mean_prob": 0.19919520616531372,
+      "sol_ratio": 0.13,
+      "ppl_mean": 8.516381980169179,
+      "ppl_median": 8.008309042865475,
+      "ppl_std": 3.4696694647982005
+    }
+  ]
+}

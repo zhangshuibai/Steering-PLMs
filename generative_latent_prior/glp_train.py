@@ -375,7 +375,7 @@ def compute_nll_hutchinson(model, latents, num_timesteps=100, n_hutchinson=5):
     """
     用 Hutchinson trace estimator 近似 flow matching 的 NLL.
 
-    NLL = -log p(x) ≈ 0.5 ||x||² + ∫₀¹ Tr(∂v/∂z) dt
+    NLL = -log p(x) = 0.5 ||z₁||² + 0.5*d*log(2π) - ∫₀¹ Tr(∂v/∂z) dt
 
     其中 Tr(∂v/∂z) 通过 Hutchinson estimator 近似:
         Tr(J) ≈ E_ε[ε^T J ε]  where ε ~ N(0, I)
@@ -442,8 +442,10 @@ def compute_nll_hutchinson(model, latents, num_timesteps=100, n_hutchinson=5):
     # log p(z_1) under N(0,I): 对每个 sample 分别计算
     log_pz1 = -0.5 * z_t.pow(2).flatten(start_dim=1).sum(dim=-1) - 0.5 * dim * math.log(2 * math.pi)  # (N,)
 
-    # log p(x) = log p(z_1) - ∫ Tr(∂v/∂z) dt
-    log_px = log_pz1 - log_det_sum
+    # CNF change of variables (Liouville equation):
+    # d/dt [log p_t(z_t)] = -Tr(∂v/∂z)
+    # ∴ log p_0(x_0) = log p_1(z_1) + ∫₀¹ Tr(∂v/∂z) dt
+    log_px = log_pz1 + log_det_sum
     nll = -log_px  # (N,)
 
     return nll.mean().item(), nll.std().item()
