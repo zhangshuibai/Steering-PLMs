@@ -64,7 +64,7 @@ BATCH_MASKS = 32
 OUTPUT_DIR = 'results/single_mask_eval'
 
 U_VALUES = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
-GLP_STEPS = 100
+STEPS_VALUES = [25, 50, 100, 200, 400]
 
 
 # ========================= Core Function =========================
@@ -298,58 +298,61 @@ def main():
         'sol_ratio': float(sol_ratio),
     })
 
-    # ---------- Groups 3-8: L17 + GLP with varying u ----------
-    for i, u in enumerate(U_VALUES):
-        group_num = 3 + i
-        method = f'L17+GLP(u={u},s={GLP_STEPS})'
-        print(f"\n--- [{group_num}/8] {method} ---")
+    # ---------- GLP groups: 6 u × 5 steps = 30 groups ----------
+    total_glp = len(U_VALUES) * len(STEPS_VALUES)
+    glp_idx = 0
+    for steps in STEPS_VALUES:
+        for u in U_VALUES:
+            glp_idx += 1
+            method = f'L17+GLP(u={u},s={steps})'
+            print(f"\n--- [GLP {glp_idx}/{total_glp}] {method} ---")
 
-        csv_path = os.path.join(OUTPUT_DIR, f'l17_glp_u{u}_s{GLP_STEPS}.csv')
+            csv_path = os.path.join(OUTPUT_DIR, f'l17_glp_u{u}_s{steps}.csv')
 
-        if os.path.exists(csv_path):
-            df = pd.read_csv(csv_path)
-            if len(df) >= n_expected:
-                gen_seqs = df['sequence'].tolist()
-                print(f"  CACHED: {len(gen_seqs)} seqs")
-                mean_prob, sol_ratio, probs = evaluate_sol(
-                    gen_seqs, model_650m, alphabet, predictor, device
-                )
-                print(f"  {len(gen_seqs)} seqs, sol_ratio={sol_ratio*100:.1f}%, mean_prob={mean_prob:.4f}")
-                all_results.append({
-                    'method': method,
-                    'csv_path': csv_path,
-                    'n_seqs': len(gen_seqs),
-                    'sol_mean_prob': float(mean_prob),
-                    'sol_ratio': float(sol_ratio),
-                    'u': u,
-                    'steps': GLP_STEPS,
-                })
-                continue
+            if os.path.exists(csv_path):
+                df = pd.read_csv(csv_path)
+                if len(df) >= n_expected:
+                    gen_seqs = df['sequence'].tolist()
+                    print(f"  CACHED: {len(gen_seqs)} seqs")
+                    mean_prob, sol_ratio, probs = evaluate_sol(
+                        gen_seqs, model_650m, alphabet, predictor, device
+                    )
+                    print(f"  {len(gen_seqs)} seqs, sol_ratio={sol_ratio*100:.1f}%, mean_prob={mean_prob:.4f}")
+                    all_results.append({
+                        'method': method,
+                        'csv_path': csv_path,
+                        'n_seqs': len(gen_seqs),
+                        'sol_mean_prob': float(mean_prob),
+                        'sol_ratio': float(sol_ratio),
+                        'u': u,
+                        'steps': steps,
+                    })
+                    continue
 
-        # Build projection function for this u
-        glp_project_fn = build_glp_projection_fn(glp_model, u=u, num_timesteps=GLP_STEPS)
+            # Build projection function for this (u, steps)
+            glp_project_fn = build_glp_projection_fn(glp_model, u=u, num_timesteps=steps)
 
-        gen_seqs = generate_single_mask(
-            ref_seqs, model_650m, alphabet, device,
-            steering_vectors=sv_all, glp_project_fn=glp_project_fn,
-            glp_layer=GLP_LAYER, n_positions=N_POSITIONS, seed=SEED,
-        )
-        pd.DataFrame({'sequence': gen_seqs}).to_csv(csv_path, index=False)
+            gen_seqs = generate_single_mask(
+                ref_seqs, model_650m, alphabet, device,
+                steering_vectors=sv_all, glp_project_fn=glp_project_fn,
+                glp_layer=GLP_LAYER, n_positions=N_POSITIONS, seed=SEED,
+            )
+            pd.DataFrame({'sequence': gen_seqs}).to_csv(csv_path, index=False)
 
-        mean_prob, sol_ratio, probs = evaluate_sol(
-            gen_seqs, model_650m, alphabet, predictor, device
-        )
-        print(f"  {len(gen_seqs)} seqs, sol_ratio={sol_ratio*100:.1f}%, mean_prob={mean_prob:.4f}")
-        all_results.append({
-            'method': method,
-            'csv_path': csv_path,
-            'n_seqs': len(gen_seqs),
-            'sol_mean_prob': float(mean_prob),
-            'sol_ratio': float(sol_ratio),
-            'u': u,
-            'steps': GLP_STEPS,
-        })
-        sys.stdout.flush()
+            mean_prob, sol_ratio, probs = evaluate_sol(
+                gen_seqs, model_650m, alphabet, predictor, device
+            )
+            print(f"  {len(gen_seqs)} seqs, sol_ratio={sol_ratio*100:.1f}%, mean_prob={mean_prob:.4f}")
+            all_results.append({
+                'method': method,
+                'csv_path': csv_path,
+                'n_seqs': len(gen_seqs),
+                'sol_mean_prob': float(mean_prob),
+                'sol_ratio': float(sol_ratio),
+                'u': u,
+                'steps': steps,
+            })
+            sys.stdout.flush()
 
     # Free GPU memory for phase 2
     del model_650m, predictor, glp_model, sv_all, sv_single
