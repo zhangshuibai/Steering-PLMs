@@ -1,0 +1,50 @@
+# =============================================================================
+# Online Training Validation: ESM2-650M Layer 17 (small subset)
+# =============================================================================
+# Quick test to verify online training produces similar metrics to offline.
+# Uses only 100K sequences for fast turnaround (~30 min).
+# =============================================================================
+
+esm_model_size: "650M"
+fasta_path: data/uniref50/uniref50.fasta.gz
+extract_layer: 17
+max_tokens: 8192
+max_seqs: 100000
+min_len: 30
+max_len: 1022
+stat_n_tokens: 100000
+
+run_name: glp-esm2-650m-layer17-d6-online-test
+output_path: generative_latent_prior/runs/glp-esm2-650m-layer17-d6-online-test
+
+glp_kwargs:
+  normalizer_config:
+    rep_statistic: null
+  denoiser_config:
+    d_input: 1280
+    d_model: 2560
+    d_mlp: 5120
+    n_layers: 6
+    multi_layer_n_layers: null
+
+use_bf16: true
+num_epochs: 1
+batch_size: 8192
+learning_rate: 5.0e-05
+gradient_accumulation_steps: 1
+gradient_clipping_threshold: 1.0
+lr_scheduler:
+  scheduler_cls: cosine_scheduler_with_warmup
+  warmup_ratio: 0.01
+  initial_factor: 0.01
+  final_factor: 0.1
+
+log_every_n_steps: 10
+eval_every_n_steps: 500
+eval_n_samples: 8192
+eval_num_timesteps: 20
+save_every_n_steps: 1000
+save_epochs: [1]
+save_opt_state: false
+
+wandb_enabled: false

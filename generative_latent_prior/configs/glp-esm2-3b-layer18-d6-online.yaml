@@ -1,0 +1,66 @@
+# =============================================================================
+# GLP Online Training Config for ESM2-3B Layer 18
+# =============================================================================
+# CUDA_VISIBLE_DEVICES=4 python generative_latent_prior/glp_train_online.py \
+#     --config generative_latent_prior/configs/glp-esm2-3b-layer18-d6-online.yaml
+#
+# ESM2-3B: 36 layers, hidden_dim=2560
+# Online training: no disk storage for activations (~4.4TB saved)
+# GPU: ESM2-3B ~6GB (bf16) + GLP ~8GB + buffer ~6GB ≈ 20-25 GB
+# =============================================================================
+
+# ESM2 settings
+esm_model_size: "3B"
+fasta_path: data/uniref50/uniref50.fasta.gz
+extract_layer: 18
+max_tokens: 4096
+max_seqs: 4000000
+min_len: 30
+max_len: 1022
+stat_n_tokens: 100000
+
+# output
+run_name: glp-esm2-3b-layer18-d6
+output_path: generative_latent_prior/runs/glp-esm2-3b-layer18-d6
+
+# model
+glp_kwargs:
+  normalizer_config:
+    rep_statistic: null   # computed online, will be auto-filled
+  denoiser_config:
+    d_input: 2560         # ESM2-3B hidden dim
+    d_model: 5120         # 2 × d_input
+    d_mlp: 10240          # 4 × d_input
+    n_layers: 6           # denoiser depth
+    multi_layer_n_layers: null
+  tracedict_config:
+    layer_prefix: "layers"
+    layers: [18]
+    retain: "output"
+
+# training
+use_bf16: true
+num_epochs: 1
+batch_size: 8192
+learning_rate: 5.0e-05
+gradient_accumulation_steps: 2
+gradient_clipping_threshold: 1.0
+lr_scheduler:
+  scheduler_cls: cosine_scheduler_with_warmup
+  warmup_ratio: 0.01
+  initial_factor: 0.01
+  final_factor: 0.1
+
+# logging and saving
+log_every_n_steps: 10
+eval_every_n_steps: 2000
+eval_n_samples: 8192
+eval_num_timesteps: 20
+save_every_n_steps: 5000
+save_epochs: [1]
+save_opt_state: true
+
+# wandb
+wandb_enabled: true
+wandb_project: glp-protein-steering
+wandb_run_name: glp-esm2-3b-layer18-d6
