@@ -1,0 +1,97 @@
+{
+  "args": {
+    "property": "sol",
+    "input_csv": "data/lysozyme/preprocessed/N_sol_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_lysozyme_sol_aspo_v3",
+    "input_score_col": "sol_prob",
+    "family_score_col": "sol_prob",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": null,
+    "mask_ratio": 0.1,
+    "mask_strategy": "aspo",
+    "num_rounds": 10,
+    "modes": [
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 0.992132604,
+    "neg_threshold": 0.419965436,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "naive_steering": {
+      "summary": {
+        "sol_mean": 0.6176959872245789,
+        "source_sol_mean": 0.2643621265888214,
+        "delta_sol_mean": 0.35333386063575745,
+        "delta_sol_median": 0.49738043546676636,
+        "success_rate": 0.8333333333333334,
+        "edit_success_rate": 0.8333333333333334,
+        "hamming_mean": 108.16666666666667,
+        "percent_identity_mean": 0.33922936537211124,
+        "fitness_gain_per_mutation_mean": 0.003436148220813369,
+        "top_1_sol_mean": 0.9632857441902161,
+        "top_5_sol_mean": 0.7247318029403687,
+        "top_10_sol_mean": 0.6176959872245789,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.5
+      },
+      "csv_path": "results/mvp_lysozyme_sol_aspo_v3/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "sol_mean": 0.7695476412773132,
+        "source_sol_mean": 0.2643621265888214,
+        "delta_sol_mean": 0.5051854848861694,
+        "delta_sol_median": 0.584134578704834,
+        "success_rate": 0.8333333333333334,
+        "edit_success_rate": 0.8333333333333334,
+        "hamming_mean": 104.83333333333333,
+        "percent_identity_mean": 0.36190080437997096,
+        "fitness_gain_per_mutation_mean": 0.004834289523385984,
+        "top_1_sol_mean": 0.9754974842071533,
+        "top_5_sol_mean": 0.8540658950805664,
+        "top_10_sol_mean": 0.7695476412773132,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.8333333333333334
+      },
+      "csv_path": "results/mvp_lysozyme_sol_aspo_v3/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}

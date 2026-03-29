@@ -1,0 +1,252 @@
+{
+  "args": {
+    "property": "sol",
+    "input_csv": "data/lysozyme/preprocessed/N_sol_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_metrics_smoke_v4",
+    "input_score_col": "sol_prob",
+    "family_score_col": "sol_prob",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": 2,
+    "mask_ratio": 0.1,
+    "mask_strategy": "random",
+    "num_rounds": 3,
+    "modes": [
+      "no_steering",
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048,
+    "mutation_entropy_bins": 10,
+    "natural_db_path": null,
+    "natural_db_sequence_col": "sequence",
+    "natural_db_max_seqs": null,
+    "compute_plddt": false
+  },
+  "steering_meta": {
+    "pos_threshold": 0.992132604,
+    "neg_threshold": 0.419965436,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "no_steering": {
+      "summary": {
+        "sol_mean": 0.05352869629859924,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.01993740350008011,
+        "delta_sol_median": 0.01993740350008011,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 35.5,
+        "percent_identity_mean": 0.7855041933304185,
+        "fitness_gain_per_mutation_mean": 0.000828216387155934,
+        "top_1_sol_mean": 0.09821812063455582,
+        "top_5_sol_mean": 0.05352869629859924,
+        "top_10_sol_mean": 0.05352869629859924,
+        "representation_l2_mean": 0.718031644821167,
+        "representation_l2_median": 0.718031644821167,
+        "representation_cosine_mean": 0.9961317777633667,
+        "representation_cosine_median": 0.9961317777633667,
+        "mutation_count_mean": 35.5,
+        "mutation_fraction_mean": 0.21449580666958146,
+        "mutation_run_count_mean": 28.0,
+        "mutation_run_mean_length_mean": 1.2305555555555556,
+        "mutation_run_max_length_mean": 3.0,
+        "mutation_span_fraction_mean": 0.9643467546404865,
+        "mutation_position_entropy_mean": 0.9383914645153894,
+        "global_mutation_position_entropy": 0.9712424707487524,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "pairwise_edit_similarity_mean": 0.2099447513812155,
+        "sol_threshold_cross_rate": 0.0,
+        "nearest_natural_status": "not_requested",
+        "plddt_status": "not_requested"
+      },
+      "csv_path": "results/mvp_metrics_smoke_v4/no_steering/per_sequence_results.csv",
+      "round_metrics": [
+        {
+          "round": 1,
+          "representation_l2_mean": 0.3813445568084717,
+          "representation_cosine_mean": 0.9988924860954285,
+          "sol_mean": 0.04796554148197174,
+          "delta_sol_mean": 0.014374248683452606,
+          "therm_mean": 45.7939453125,
+          "delta_therm_mean": 1.5857620239257812
+        },
+        {
+          "round": 2,
+          "representation_l2_mean": 0.5256169438362122,
+          "representation_cosine_mean": 0.997890055179596,
+          "sol_mean": 0.07606338709592819,
+          "delta_sol_mean": 0.04247209429740906,
+          "therm_mean": 45.55897521972656,
+          "delta_therm_mean": 1.3507938385009766
+        },
+        {
+          "round": 3,
+          "representation_l2_mean": 0.718031644821167,
+          "representation_cosine_mean": 0.9961317777633667,
+          "sol_mean": 0.05352869629859924,
+          "delta_sol_mean": 0.01993740350008011,
+          "therm_mean": 46.58324432373047,
+          "delta_therm_mean": 2.375062942504883
+        }
+      ]
+    },
+    "naive_steering": {
+      "summary": {
+        "sol_mean": 0.21763713657855988,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.18404585123062134,
+        "delta_sol_median": 0.18404585123062134,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 36.5,
+        "percent_identity_mean": 0.7774752573631702,
+        "fitness_gain_per_mutation_mean": 0.0073104011826217175,
+        "top_1_sol_mean": 0.427298903465271,
+        "top_5_sol_mean": 0.21763713657855988,
+        "top_10_sol_mean": 0.21763713657855988,
+        "representation_l2_mean": 0.6638085842132568,
+        "representation_l2_median": 0.6638085842132568,
+        "representation_cosine_mean": 0.996722400188446,
+        "representation_cosine_median": 0.996722400188446,
+        "mutation_count_mean": 36.5,
+        "mutation_fraction_mean": 0.22252474263682975,
+        "mutation_run_count_mean": 30.0,
+        "mutation_run_mean_length_mean": 1.1997607655502391,
+        "mutation_run_max_length_mean": 3.5,
+        "mutation_span_fraction_mean": 0.9643467546404865,
+        "mutation_position_entropy_mean": 0.9605925901420227,
+        "global_mutation_position_entropy": 0.9867348376601967,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "pairwise_edit_similarity_mean": 0.19889502762430944,
+        "sol_threshold_cross_rate": 0.0,
+        "nearest_natural_status": "not_requested",
+        "plddt_status": "not_requested"
+      },
+      "csv_path": "results/mvp_metrics_smoke_v4/naive_steering/per_sequence_results.csv",
+      "round_metrics": [
+        {
+          "round": 1,
+          "representation_l2_mean": 0.359438419342041,
+          "representation_cosine_mean": 0.9990119934082031,
+          "sol_mean": 0.09862509369850159,
+          "delta_sol_mean": 0.06503380089998245,
+          "therm_mean": 44.79450607299805,
+          "delta_therm_mean": 0.5863227844238281
+        },
+        {
+          "round": 2,
+          "representation_l2_mean": 0.506611168384552,
+          "representation_cosine_mean": 0.998065710067749,
+          "sol_mean": 0.14467337727546692,
+          "delta_sol_mean": 0.11108208447694778,
+          "therm_mean": 44.689170837402344,
+          "delta_therm_mean": 0.480987548828125
+        },
+        {
+          "round": 3,
+          "representation_l2_mean": 0.6638085842132568,
+          "representation_cosine_mean": 0.996722400188446,
+          "sol_mean": 0.21763713657855988,
+          "delta_sol_mean": 0.18404585123062134,
+          "therm_mean": 45.797176361083984,
+          "delta_therm_mean": 1.5889930725097656
+        }
+      ]
+    },
+    "alignment_steering": {
+      "summary": {
+        "sol_mean": 0.07400915026664734,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.040417857468128204,
+        "delta_sol_median": 0.040417857468128204,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 35.5,
+        "percent_identity_mean": 0.7846695019674867,
+        "fitness_gain_per_mutation_mean": 0.0017524185292869872,
+        "top_1_sol_mean": 0.1449788361787796,
+        "top_5_sol_mean": 0.07400915026664734,
+        "top_10_sol_mean": 0.07400915026664734,
+        "representation_l2_mean": 0.6976975202560425,
+        "representation_l2_median": 0.6976975202560425,
+        "representation_cosine_mean": 0.9963431358337402,
+        "representation_cosine_median": 0.9963431358337402,
+        "mutation_count_mean": 35.5,
+        "mutation_fraction_mean": 0.2153304980325132,
+        "mutation_run_count_mean": 28.5,
+        "mutation_run_mean_length_mean": 1.2142857142857144,
+        "mutation_run_max_length_mean": 3.0,
+        "mutation_span_fraction_mean": 0.9643467546404865,
+        "mutation_position_entropy_mean": 0.9459173473475766,
+        "global_mutation_position_entropy": 0.9804148754307652,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "pairwise_edit_similarity_mean": 0.20441988950276246,
+        "sol_threshold_cross_rate": 0.0,
+        "nearest_natural_status": "not_requested",
+        "plddt_status": "not_requested"
+      },
+      "csv_path": "results/mvp_metrics_smoke_v4/alignment_steering/per_sequence_results.csv",
+      "round_metrics": [
+        {
+          "round": 1,
+          "representation_l2_mean": 0.3784303665161133,
+          "representation_cosine_mean": 0.9989444017410278,
+          "sol_mean": 0.10441058874130249,
+          "delta_sol_mean": 0.07081928849220276,
+          "therm_mean": 45.39305114746094,
+          "delta_therm_mean": 1.1848678588867188
+        },
+        {
+          "round": 2,
+          "representation_l2_mean": 0.560079038143158,
+          "representation_cosine_mean": 0.9976222515106201,
+          "sol_mean": 0.06909544765949249,
+          "delta_sol_mean": 0.03550415486097336,
+          "therm_mean": 44.36412048339844,
+          "delta_therm_mean": 0.15593719482421875
+        },
+        {
+          "round": 3,
+          "representation_l2_mean": 0.6976975202560425,
+          "representation_cosine_mean": 0.9963431358337402,
+          "sol_mean": 0.07400915026664734,
+          "delta_sol_mean": 0.040417857468128204,
+          "therm_mean": 45.75951385498047,
+          "delta_therm_mean": 1.5513286590576172
+        }
+      ]
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": []
+  }
+}
