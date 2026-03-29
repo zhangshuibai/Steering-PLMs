@@ -2,6 +2,12 @@
 
 This note summarizes the full lysozyme reruns after enabling the richer evaluation metrics in [`mvp_eval_pipeline.py`](/Users/chloe/Desktop/project/protein/Steering-PLMs/mvp_eval_pipeline.py).
 
+For the later broader-pool follow-up, see:
+
+- [`lysozyme_uniref50_2k_pilot_analysis.md`](/Users/chloe/Desktop/project/protein/Steering-PLMs/docs/lysozyme_uniref50_2k_pilot_analysis.md)
+
+That pilot uses a different benchmark and a smaller `n = 30` evaluation slice, so it should be compared qualitatively rather than as a strict apples-to-apples continuation of these v4 numbers.
+
 Compared with the earlier v3 runs, v4 adds:
 
 - nearest-neighbor identity to a natural-sequence DB

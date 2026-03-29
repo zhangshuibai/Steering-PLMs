@@ -1,0 +1,11 @@
+{
+  "query": "identity:0.5 AND lysozyme AND length:[60 TO 400]",
+  "row_count": 20,
+  "page_size": 500,
+  "max_records": 20,
+  "uniprot_release": "2026_01",
+  "uniprot_release_date": "28-January-2026",
+  "api_deployment_date": "28-January-2026",
+  "x_total_results": "18014",
+  "source_url": "https://rest.uniprot.org/uniref/search"
+}
