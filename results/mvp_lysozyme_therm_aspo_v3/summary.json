@@ -1,0 +1,97 @@
+{
+  "args": {
+    "property": "therm",
+    "input_csv": "data/lysozyme/preprocessed/N_therm_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_lysozyme_therm_aspo_v3",
+    "input_score_col": "therm_score",
+    "family_score_col": "therm_score",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": null,
+    "mask_ratio": 0.1,
+    "mask_strategy": "aspo",
+    "num_rounds": 10,
+    "modes": [
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 57.1619412,
+    "neg_threshold": 47.8440862,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "naive_steering": {
+      "summary": {
+        "therm_mean": 47.12129211425781,
+        "source_therm_mean": 46.51033020019531,
+        "delta_therm_mean": 0.6109669804573059,
+        "delta_therm_median": -0.9698905944824219,
+        "success_rate": 0.5,
+        "edit_success_rate": 0.5,
+        "hamming_mean": 122.5,
+        "percent_identity_mean": 0.2788195928624319,
+        "fitness_gain_per_mutation_mean": -0.0014305237143333969,
+        "top_1_therm_mean": 56.41684341430664,
+        "top_5_therm_mean": 47.74993133544922,
+        "top_10_therm_mean": 47.12128829956055,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.3333333333333333
+      },
+      "csv_path": "results/mvp_lysozyme_therm_aspo_v3/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "therm_mean": 48.2515754699707,
+        "source_therm_mean": 46.51033020019531,
+        "delta_therm_mean": 1.741250991821289,
+        "delta_therm_median": 1.0251426696777344,
+        "success_rate": 0.6666666666666666,
+        "edit_success_rate": 0.6666666666666666,
+        "hamming_mean": 118.83333333333333,
+        "percent_identity_mean": 0.29755974481376285,
+        "fitness_gain_per_mutation_mean": 0.012545695376169917,
+        "top_1_therm_mean": 53.54081726074219,
+        "top_5_therm_mean": 48.99605178833008,
+        "top_10_therm_mean": 48.2515754699707,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.16666666666666666
+      },
+      "csv_path": "results/mvp_lysozyme_therm_aspo_v3/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}

@@ -3,7 +3,7 @@ MVP ESM2 steering + editing evaluation pipeline.
 
 This script is designed for controlled-family editing experiments where we:
 1. build steering vectors from the top/bottom quantiles of a family pool,
-2. edit test sequences with either random masking or targeted ASPO-style masking,
+2. edit test sequences with either random masking or ASPO-style masking,
 3. compare no steering / naive steering / alignment steering,
 4. evaluate primary fitness, auxiliary fitness, edit size, diversity, and pPPL.
 
@@ -12,9 +12,10 @@ Notes
 - "alignment steering" is implemented as a projection hook. For MVP the default
   projector is identity, so the mode is runnable now and can later be replaced
   by a diffusion prior without changing the pipeline shape.
-- "ASPO-style" site selection here is an ESM2 approximation: we rank token
-  positions by cosine similarity between token representations and steering
-  vectors at the selected steering layers, then iteratively edit the top sites.
+- "ASPO-style" site selection here is an ESM2 approximation: we compute a token
+  relatedness score from cosine similarity between token representations and
+  steering vectors at the selected steering layers, then iteratively edit the
+  lowest-score sites.
 """
 
 import argparse
@@ -84,7 +85,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n", type=int, default=None,
                         help="Maximum number of test sequences to edit.")
     parser.add_argument("--mask_ratio", type=float, default=0.1)
-    parser.add_argument("--mask_strategy", choices=["random", "targeted"], default="random")
+    parser.add_argument(
+        "--mask_strategy",
+        choices=["random", "aspo", "targeted"],
+        default="random",
+        help="Editing task. 'targeted' is kept as a backward-compatible alias for 'aspo'.",
+    )
+    parser.add_argument(
+        "--num_rounds",
+        type=int,
+        default=None,
+        help="Number of edit rounds. Defaults to ceil(1 / mask_ratio).",
+    )
     parser.add_argument("--modes", nargs="+",
                         default=["no_steering", "naive_steering", "alignment_steering"],
                         choices=["no_steering", "naive_steering", "alignment_steering"])
@@ -94,8 +106,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--top_p", type=float, default=0.9)
     parser.add_argument("--target_layers", type=int, nargs="+", default=[17, 18],
-                        help="Layers used for single-layer steering and ASPO-style ranking.")
-    parser.add_argument("--avoid_original_token", action="store_true", default=True)
+                        help="Layers used for ASPO token-relatedness scoring and steering.")
+    parser.add_argument(
+        "--avoid_original_token",
+        action="store_true",
+        default=False,
+        help="Disallow sampling the current residue at masked sites. Default is to allow it.",
+    )
     parser.add_argument("--allow_original_token", dest="avoid_original_token", action="store_false")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sol_predictor_path", default="saved_predictors/sol_predictor_final.pt")
@@ -116,6 +133,19 @@ def set_seed(seed: int) -> None:
 
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
+
+
+def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
+    if args.mask_strategy == "targeted":
+        args.mask_strategy = "aspo"
+
+    if args.num_rounds is not None and args.num_rounds <= 0:
+        raise ValueError("--num_rounds must be positive when provided.")
+
+    if args.mask_strategy == "aspo" and "no_steering" in args.modes:
+        raise ValueError("ASPO only supports steering modes. Remove 'no_steering' from --modes.")
+
+    return args
 
 
 def resolve_score_column(df: pd.DataFrame, preferred: Optional[str]) -> Optional[str]:
@@ -289,7 +319,7 @@ def predict_masked_positions(
     return pred_tokens[mask_positions]
 
 
-def get_position_scores(
+def get_token_relatedness_scores(
     tokens: torch.Tensor,
     model,
     target_layers: Sequence[int],
@@ -314,49 +344,119 @@ def get_position_scores(
     return stacked.mean(dim=0).detach().cpu().numpy()
 
 
-def choose_mask_positions(
+def choose_random_mask_positions(
+    candidate_sites: Sequence[int],
+    mask_count: int,
+    rng: np.random.Generator,
+) -> List[int]:
+    sampled = rng.choice(np.array(candidate_sites), size=mask_count, replace=False)
+    return sampled.tolist()
+
+
+def choose_aspo_mask_positions(
     tokens: torch.Tensor,
     model,
     candidate_sites: Sequence[int],
     mask_count: int,
-    strategy: str,
-    steering_vectors: Optional[torch.Tensor],
+    steering_vectors: torch.Tensor,
     target_layers: Sequence[int],
-    rng: np.random.Generator,
     property_name: str,
 ) -> List[int]:
     if mask_count <= 0:
         return []
 
-    if strategy == "random" or steering_vectors is None:
-        sampled = rng.choice(np.array(candidate_sites), size=mask_count, replace=False)
-        return sampled.tolist()
-
     center_features = property_name == "sol"
-    position_scores = get_position_scores(
+    relatedness_scores = get_token_relatedness_scores(
         tokens=tokens,
         model=model,
         target_layers=target_layers,
         steering_vectors=steering_vectors,
         center_features=center_features,
     )
-    ranked = sorted(candidate_sites, key=lambda idx: position_scores[idx], reverse=True)
+    ranked = sorted(candidate_sites, key=lambda idx: relatedness_scores[idx])
     return ranked[:mask_count]
 
 
-def edit_sequence(
+def compute_rounds(mask_ratio: float, num_rounds: Optional[int]) -> int:
+    if not 0.0 < mask_ratio <= 1.0:
+        raise ValueError("--mask_ratio must be in (0, 1].")
+    if num_rounds is not None:
+        return num_rounds
+    return math.ceil(1.0 / mask_ratio)
+
+
+def edit_sequence_random(
     seq: str,
     model,
     alphabet,
     mode: str,
-    mask_strategy: str,
     steering_vectors: Optional[torch.Tensor],
     mask_ratio: float,
+    num_rounds: Optional[int],
     target_layers: Sequence[int],
     temperature: float,
     top_p: float,
     avoid_original_token: bool,
     rng: np.random.Generator,
+    alignment_projector,
+) -> Dict[str, object]:
+    batch_converter = alphabet.get_batch_converter()
+    mask_idx = alphabet.mask_idx
+    _, _, tokens = batch_converter([("protein", seq)])
+    tokens = tokens.to(next(model.parameters()).device)
+    edited_tokens = tokens.clone()
+    length = edited_tokens.size(1) - 2
+    candidate_sites = list(range(length))
+    rounds = compute_rounds(mask_ratio, num_rounds)
+    edited_sites: List[int] = []
+
+    for _round_idx in range(rounds):
+        if not candidate_sites:
+            break
+        mask_count = min(math.ceil(length * mask_ratio), len(candidate_sites))
+        chosen_sites = choose_random_mask_positions(candidate_sites, mask_count, rng)
+        if not chosen_sites:
+            break
+
+        mask_positions = torch.tensor(chosen_sites, device=edited_tokens.device) + 1
+        masked_tokens = edited_tokens.clone()
+        masked_tokens[0, mask_positions] = mask_idx
+        new_values = predict_masked_positions(
+            model=model,
+            seq_token=masked_tokens,
+            original_tokens=edited_tokens,
+            mask_positions=mask_positions,
+            mode=mode,
+            steering_vectors=steering_vectors,
+            temperature=temperature,
+            top_p=top_p,
+            avoid_original_token=avoid_original_token,
+            alignment_projector=alignment_projector,
+        )
+        edited_tokens[0, mask_positions] = new_values
+        candidate_sites = [idx for idx in candidate_sites if idx not in chosen_sites]
+        edited_sites.extend(chosen_sites)
+
+    edited_seq = decode_tokens(edited_tokens, alphabet)
+    return {
+        "edited_sequence": edited_seq,
+        "edited_sites": sorted(set(edited_sites)),
+        "rounds": rounds,
+    }
+
+
+def edit_sequence_aspo(
+    seq: str,
+    model,
+    alphabet,
+    mode: str,
+    steering_vectors: torch.Tensor,
+    mask_ratio: float,
+    num_rounds: Optional[int],
+    target_layers: Sequence[int],
+    temperature: float,
+    top_p: float,
+    avoid_original_token: bool,
     property_name: str,
     alignment_projector,
 ) -> Dict[str, object]:
@@ -367,22 +467,20 @@ def edit_sequence(
     edited_tokens = tokens.clone()
     length = edited_tokens.size(1) - 2
     candidate_sites = list(range(length))
-    rounds = math.ceil(1.0 / mask_ratio)
+    rounds = compute_rounds(mask_ratio, num_rounds)
     edited_sites: List[int] = []
 
     for _round_idx in range(rounds):
         if not candidate_sites:
             break
         mask_count = min(math.ceil(length * mask_ratio), len(candidate_sites))
-        chosen_sites = choose_mask_positions(
+        chosen_sites = choose_aspo_mask_positions(
             tokens=edited_tokens,
             model=model,
             candidate_sites=candidate_sites,
             mask_count=mask_count,
-            strategy=mask_strategy,
             steering_vectors=steering_vectors,
             target_layers=target_layers,
-            rng=rng,
             property_name=property_name,
         )
         if not chosen_sites:
@@ -413,6 +511,62 @@ def edit_sequence(
         "edited_sites": sorted(set(edited_sites)),
         "rounds": rounds,
     }
+
+
+def edit_sequence(
+    seq: str,
+    model,
+    alphabet,
+    mode: str,
+    mask_strategy: str,
+    steering_vectors: Optional[torch.Tensor],
+    mask_ratio: float,
+    num_rounds: Optional[int],
+    target_layers: Sequence[int],
+    temperature: float,
+    top_p: float,
+    avoid_original_token: bool,
+    rng: np.random.Generator,
+    property_name: str,
+    alignment_projector,
+) -> Dict[str, object]:
+    if mask_strategy == "random":
+        return edit_sequence_random(
+            seq=seq,
+            model=model,
+            alphabet=alphabet,
+            mode=mode,
+            steering_vectors=steering_vectors,
+            mask_ratio=mask_ratio,
+            num_rounds=num_rounds,
+            target_layers=target_layers,
+            temperature=temperature,
+            top_p=top_p,
+            avoid_original_token=avoid_original_token,
+            rng=rng,
+            alignment_projector=alignment_projector,
+        )
+
+    if mask_strategy == "aspo":
+        if steering_vectors is None:
+            raise ValueError("ASPO editing requires steering vectors.")
+        return edit_sequence_aspo(
+            seq=seq,
+            model=model,
+            alphabet=alphabet,
+            mode=mode,
+            steering_vectors=steering_vectors,
+            mask_ratio=mask_ratio,
+            num_rounds=num_rounds,
+            target_layers=target_layers,
+            temperature=temperature,
+            top_p=top_p,
+            avoid_original_token=avoid_original_token,
+            property_name=property_name,
+            alignment_projector=alignment_projector,
+        )
+
+    raise ValueError(f"Unknown mask strategy: {mask_strategy}")
 
 
 def load_predictor(path: str, device: str, name: str, predictor_type: str) -> PredictorBundle:
@@ -572,7 +726,7 @@ def maybe_compute_ppl(
 
 
 def main() -> None:
-    args = parse_args()
+    args = normalize_args(parse_args())
     set_seed(args.seed)
     ensure_dir(args.output_dir)
 
@@ -624,7 +778,7 @@ def main() -> None:
         "results": {},
         "notes": {
             "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
-            "targeted_masking": "ASPO-style approximation using cosine ranking at selected ESM2 layers.",
+            "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
             "optional_metrics_not_in_mvp": ["pLDDT", "nearest_neighbor_identity_to_natural_db"],
         },
     }
@@ -646,6 +800,7 @@ def main() -> None:
                 mask_strategy=args.mask_strategy,
                 steering_vectors=steering_vectors,
                 mask_ratio=args.mask_ratio,
+                num_rounds=args.num_rounds,
                 target_layers=args.target_layers,
                 temperature=args.temperature,
                 top_p=args.top_p,

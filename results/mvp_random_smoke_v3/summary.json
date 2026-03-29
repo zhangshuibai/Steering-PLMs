@@ -1,0 +1,118 @@
+{
+  "args": {
+    "property": "sol",
+    "input_csv": "data/lysozyme/preprocessed/N_sol_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_random_smoke_v3",
+    "input_score_col": "sol_prob",
+    "family_score_col": "sol_prob",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": 2,
+    "mask_ratio": 0.1,
+    "mask_strategy": "random",
+    "num_rounds": 10,
+    "modes": [
+      "no_steering",
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 0.992132604,
+    "neg_threshold": 0.419965436,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "no_steering": {
+      "summary": {
+        "sol_mean": 0.3181951642036438,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.28460389375686646,
+        "delta_sol_median": 0.28460389375686646,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 115.5,
+        "percent_identity_mean": 0.3051194403593147,
+        "fitness_gain_per_mutation_mean": 0.003770064450975189,
+        "top_1_sol_mean": 0.5368757843971252,
+        "top_5_sol_mean": 0.3181951642036438,
+        "top_10_sol_mean": 0.3181951642036438,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.5
+      },
+      "csv_path": "results/mvp_random_smoke_v3/no_steering/per_sequence_results.csv"
+    },
+    "naive_steering": {
+      "summary": {
+        "sol_mean": 0.12069199234247208,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.08710069954395294,
+        "delta_sol_median": 0.08710069954395294,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 118.5,
+        "percent_identity_mean": 0.2835367065463651,
+        "fitness_gain_per_mutation_mean": 0.0007188873740150608,
+        "top_1_sol_mean": 0.12679263949394226,
+        "top_5_sol_mean": 0.12069199234247208,
+        "top_10_sol_mean": 0.12069199234247208,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_random_smoke_v3/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "sol_mean": 0.03689049556851387,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.003299204632639885,
+        "delta_sol_median": 0.003299204632639885,
+        "success_rate": 0.5,
+        "edit_success_rate": 0.5,
+        "hamming_mean": 121.5,
+        "percent_identity_mean": 0.25944989864462026,
+        "fitness_gain_per_mutation_mean": -0.00015338357336011277,
+        "top_1_sol_mean": 0.06922684609889984,
+        "top_5_sol_mean": 0.03689049556851387,
+        "top_10_sol_mean": 0.03689049556851387,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_random_smoke_v3/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}

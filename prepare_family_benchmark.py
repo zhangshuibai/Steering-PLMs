@@ -397,7 +397,7 @@ def bottom_n_selection(
     if target_size <= 0:
         raise ValueError("selection.test_target_size must be positive.")
 
-    effective_fraction = max(base_fraction, min(1.0, target_size / len(df)))
+    effective_fraction = min(1.0, base_fraction)
     count = min(len(df), max(1, int(math.ceil(len(df) * effective_fraction))))
     selected = df.sort_values(score_col, ascending=True).head(count).reset_index(drop=True)
     if len(selected) > target_size:
@@ -408,6 +408,8 @@ def bottom_n_selection(
         "count": int(len(selected)),
         "requested_size": int(target_size),
         "effective_fraction": float(effective_fraction),
+        "available_tail_count": int(count),
+        "requested_size_exceeds_tail": bool(target_size > count),
         "threshold": threshold,
     }
 

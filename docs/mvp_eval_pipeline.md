@@ -10,8 +10,8 @@ For a controlled family test set, it:
 
 1. Builds steering vectors from the top 20% and bottom 20% of a family pool.
 2. Edits input sequences with either:
-   - random 10% masking, or
-   - targeted ASPO-style masking via cosine-ranked ESM2 token representations.
+   - random multi-round 10% masking, or
+   - ASPO-style multi-round masking via token-relatedness scores from ESM2 representations.
 3. Compares:
    - `no_steering`
    - `naive_steering`
@@ -30,8 +30,10 @@ For a controlled family test set, it:
 - Backbone is ESM2 only.
 - Alignment steering is a projection hook with an identity projector for now.
   This keeps the experiment shape stable so a future diffusion prior can drop in.
-- Targeted masking is ASPO-style rather than paper-exact:
-  token positions are ranked by cosine similarity to steering vectors at the chosen layers.
+- Random task:
+  all modes are allowed, each round masks `mask_ratio` of the remaining sites, and original tokens are allowed by default.
+- ASPO task:
+  only steering modes are allowed, token-relatedness scores are computed from cosine similarity to steering vectors at the chosen layers, and the lowest-score sites are edited each round.
 - Optional metrics like pLDDT and nearest-neighbor identity are intentionally left out of the MVP summary.
 
 ## Example commands
@@ -45,11 +47,12 @@ python mvp_eval_pipeline.py \
   --family_csv data/sol_filtered.csv \
   --output_dir results/mvp_sol_random \
   --mask_strategy random \
+  --num_rounds 10 \
   --device cuda:0 \
   --ppl_gpu_ids 0 1 2 3
 ```
 
-Thermostability steering with targeted masking:
+Thermostability steering with ASPO masking:
 
 ```bash
 python mvp_eval_pipeline.py \
@@ -57,7 +60,9 @@ python mvp_eval_pipeline.py \
   --input_csv data/N_therm_test.csv \
   --family_csv data/therm_filtered.csv \
   --output_dir results/mvp_therm_targeted \
-  --mask_strategy targeted \
+  --mask_strategy aspo \
+  --modes naive_steering alignment_steering \
+  --num_rounds 10 \
   --device cuda:0 \
   --ppl_gpu_ids 0 1 2 3
 ```

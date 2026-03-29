@@ -1,0 +1,97 @@
+{
+  "args": {
+    "property": "sol",
+    "input_csv": "data/lysozyme/preprocessed/N_sol_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_aspo_smoke_v3",
+    "input_score_col": "sol_prob",
+    "family_score_col": "sol_prob",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": 2,
+    "mask_ratio": 0.1,
+    "mask_strategy": "aspo",
+    "num_rounds": 10,
+    "modes": [
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 0.992132604,
+    "neg_threshold": 0.419965436,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "naive_steering": {
+      "summary": {
+        "sol_mean": 0.3932260274887085,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.35963475704193115,
+        "delta_sol_median": 0.35963475704193115,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 128.0,
+        "percent_identity_mean": 0.21853014825708494,
+        "fitness_gain_per_mutation_mean": 0.002755214579812949,
+        "top_1_sol_mean": 0.4925635755062103,
+        "top_5_sol_mean": 0.3932260274887085,
+        "top_10_sol_mean": 0.3932260274887085,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_aspo_smoke_v3/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "sol_mean": 0.4765866994857788,
+        "source_sol_mean": 0.033591292798519135,
+        "delta_sol_mean": 0.4429953694343567,
+        "delta_sol_median": 0.4429953694343567,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 129.0,
+        "percent_identity_mean": 0.2146746691044954,
+        "fitness_gain_per_mutation_mean": 0.004487811096266504,
+        "top_1_sol_mean": 0.736587643623352,
+        "top_5_sol_mean": 0.4765866994857788,
+        "top_10_sol_mean": 0.4765866994857788,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.5
+      },
+      "csv_path": "results/mvp_aspo_smoke_v3/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}

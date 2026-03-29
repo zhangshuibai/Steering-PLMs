@@ -20,7 +20,7 @@
   },
   "scoring": {
     "enabled": true,
-    "device": "cuda",
+    "device": "mps",
     "batch_size": 8,
     "esm_model": "650M",
     "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
