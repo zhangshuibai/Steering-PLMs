@@ -1,5 +1,9 @@
 # Lysozyme MVP V3 Analysis
 
+For the richer-metric reruns with nearest-natural identity, `ppl`, representation drift, and round-trajectory analysis, see:
+
+- [`lysozyme_mvp_v4_analysis.md`](/Users/chloe/Desktop/project/protein/Steering-PLMs/docs/lysozyme_mvp_v4_analysis.md)
+
 This note summarizes the revised lysozyme experiments after three changes:
 
 1. The family pool was expanded from a narrow lysozyme-C subset to a broader reviewed UniProt lysozyme family.
@@ -146,4 +150,3 @@ No blocking engineering issues remain for the revised setup:
 3. For lysozyme specifically, prioritize:
    - solubility: `aspo + alignment_steering`
    - thermostability: compare `random + naive_steering` against `aspo + alignment_steering`
-

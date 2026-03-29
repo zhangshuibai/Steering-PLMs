@@ -24,6 +24,7 @@ import math
 import os
 import types
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -123,6 +124,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ppl_batch_masks", type=int, default=32)
     parser.add_argument("--diversity_pairs", type=int, default=2048,
                         help="Maximum number of pair samples for diversity estimation.")
+    parser.add_argument("--mutation_entropy_bins", type=int, default=10)
+    parser.add_argument("--natural_db_path", default=None,
+                        help="Optional natural-sequence database for nearest-neighbor identity (csv/fasta/txt).")
+    parser.add_argument("--natural_db_sequence_col", default="sequence")
+    parser.add_argument("--natural_db_max_seqs", type=int, default=None)
+    parser.add_argument("--compute_plddt", action="store_true",
+                        help="Optionally run ESMFold and report pLDDT metrics if dependencies are available.")
     return parser.parse_args()
 
 
@@ -144,6 +152,9 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
 
     if args.mask_strategy == "aspo" and "no_steering" in args.modes:
         raise ValueError("ASPO only supports steering modes. Remove 'no_steering' from --modes.")
+
+    if args.mutation_entropy_bins <= 1:
+        raise ValueError("--mutation_entropy_bins must be > 1.")
 
     return args
 
@@ -291,6 +302,43 @@ def decode_tokens(tokens: torch.Tensor, alphabet) -> str:
     return "".join(alphabet.get_tok(tok.item()) for tok in seq)
 
 
+def parse_fasta_sequences(path: str) -> List[str]:
+    seqs: List[str] = []
+    chunks: List[str] = []
+    with open(path) as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith(">"):
+                if chunks:
+                    seqs.append("".join(chunks).upper())
+                    chunks = []
+            else:
+                chunks.append(line)
+    if chunks:
+        seqs.append("".join(chunks).upper())
+    return seqs
+
+
+def load_sequence_db(path: str, sequence_col: str, max_seqs: Optional[int]) -> List[str]:
+    suffix = Path(path).suffix.lower()
+    if suffix in {".csv", ".tsv"}:
+        sep = "\t" if suffix == ".tsv" else ","
+        df = pd.read_csv(path, sep=sep)
+        if sequence_col not in df.columns:
+            raise ValueError(f"Natural DB file is missing sequence column '{sequence_col}'")
+        seqs = df[sequence_col].dropna().astype(str).str.upper().tolist()
+    elif suffix in {".fasta", ".fa", ".faa"}:
+        seqs = parse_fasta_sequences(path)
+    else:
+        with open(path) as f:
+            seqs = [line.strip().upper() for line in f if line.strip()]
+    if max_seqs is not None:
+        seqs = seqs[:max_seqs]
+    return seqs
+
+
 def predict_masked_positions(
     model,
     seq_token: torch.Tensor,
@@ -409,6 +457,7 @@ def edit_sequence_random(
     candidate_sites = list(range(length))
     rounds = compute_rounds(mask_ratio, num_rounds)
     edited_sites: List[int] = []
+    round_sequences: List[str] = []
 
     for _round_idx in range(rounds):
         if not candidate_sites:
@@ -436,12 +485,14 @@ def edit_sequence_random(
         edited_tokens[0, mask_positions] = new_values
         candidate_sites = [idx for idx in candidate_sites if idx not in chosen_sites]
         edited_sites.extend(chosen_sites)
+        round_sequences.append(decode_tokens(edited_tokens, alphabet))
 
     edited_seq = decode_tokens(edited_tokens, alphabet)
     return {
         "edited_sequence": edited_seq,
         "edited_sites": sorted(set(edited_sites)),
         "rounds": rounds,
+        "round_sequences": round_sequences,
     }
 
 
@@ -469,6 +520,7 @@ def edit_sequence_aspo(
     candidate_sites = list(range(length))
     rounds = compute_rounds(mask_ratio, num_rounds)
     edited_sites: List[int] = []
+    round_sequences: List[str] = []
 
     for _round_idx in range(rounds):
         if not candidate_sites:
@@ -504,12 +556,14 @@ def edit_sequence_aspo(
         edited_tokens[0, mask_positions] = new_values
         candidate_sites = [idx for idx in candidate_sites if idx not in chosen_sites]
         edited_sites.extend(chosen_sites)
+        round_sequences.append(decode_tokens(edited_tokens, alphabet))
 
     edited_seq = decode_tokens(edited_tokens, alphabet)
     return {
         "edited_sequence": edited_seq,
         "edited_sites": sorted(set(edited_sites)),
         "rounds": rounds,
+        "round_sequences": round_sequences,
     }
 
 
@@ -612,6 +666,14 @@ def evaluate_predictors(
     predictors: Sequence[PredictorBundle],
 ) -> Dict[str, np.ndarray]:
     features = extract_last_layer_features(seqs, model, alphabet, device)
+    return predict_from_features(features, predictors, device), features
+
+
+def predict_from_features(
+    features: torch.Tensor,
+    predictors: Sequence[PredictorBundle],
+    device: str,
+) -> Dict[str, np.ndarray]:
     outputs: Dict[str, np.ndarray] = {}
     for bundle in predictors:
         with torch.no_grad():
@@ -628,10 +690,274 @@ def hamming_distance(seq_a: str, seq_b: str) -> int:
     return sum(ch1 != ch2 for ch1, ch2 in zip(seq_a, seq_b))
 
 
+def levenshtein_distance(seq_a: str, seq_b: str) -> int:
+    if seq_a == seq_b:
+        return 0
+    if not seq_a:
+        return len(seq_b)
+    if not seq_b:
+        return len(seq_a)
+
+    prev = list(range(len(seq_b) + 1))
+    for i, ch_a in enumerate(seq_a, start=1):
+        curr = [i]
+        for j, ch_b in enumerate(seq_b, start=1):
+            cost = 0 if ch_a == ch_b else 1
+            curr.append(min(
+                prev[j] + 1,
+                curr[j - 1] + 1,
+                prev[j - 1] + cost,
+            ))
+        prev = curr
+    return prev[-1]
+
+
+def normalized_edit_similarity(seq_a: str, seq_b: str) -> float:
+    max_len = max(len(seq_a), len(seq_b), 1)
+    return 1.0 - (levenshtein_distance(seq_a, seq_b) / max_len)
+
+
+def mutation_positions(seq_a: str, seq_b: str) -> List[int]:
+    return [idx for idx, (ch_a, ch_b) in enumerate(zip(seq_a, seq_b)) if ch_a != ch_b]
+
+
+def contiguous_runs(positions: Sequence[int]) -> List[Tuple[int, int]]:
+    if not positions:
+        return []
+    runs = []
+    start = positions[0]
+    prev = positions[0]
+    for pos in positions[1:]:
+        if pos == prev + 1:
+            prev = pos
+            continue
+        runs.append((start, prev))
+        start = pos
+        prev = pos
+    runs.append((start, prev))
+    return runs
+
+
+def position_entropy(positions: Sequence[int], seq_len: int, n_bins: int) -> float:
+    if not positions or seq_len <= 0:
+        return 0.0
+    counts = np.zeros(n_bins, dtype=float)
+    for pos in positions:
+        rel = min(max(pos / max(seq_len - 1, 1), 0.0), 1.0)
+        bin_idx = min(n_bins - 1, int(rel * n_bins))
+        counts[bin_idx] += 1.0
+    probs = counts[counts > 0] / counts.sum()
+    entropy = -(probs * np.log(probs)).sum()
+    return float(entropy / np.log(n_bins))
+
+
+def mutation_pattern_metrics(seq_a: str, seq_b: str, entropy_bins: int) -> Dict[str, float]:
+    positions = mutation_positions(seq_a, seq_b)
+    n_mut = len(positions)
+    if n_mut == 0:
+        return {
+            "mutation_count": 0.0,
+            "mutation_fraction": 0.0,
+            "mutation_run_count": 0.0,
+            "mutation_run_mean_length": 0.0,
+            "mutation_run_max_length": 0.0,
+            "mutation_span_fraction": 0.0,
+            "mutation_position_entropy": 0.0,
+        }
+    runs = contiguous_runs(positions)
+    run_lengths = [end - start + 1 for start, end in runs]
+    span_fraction = (positions[-1] - positions[0] + 1) / max(len(seq_a), 1)
+    return {
+        "mutation_count": float(n_mut),
+        "mutation_fraction": float(n_mut / max(len(seq_a), 1)),
+        "mutation_run_count": float(len(runs)),
+        "mutation_run_mean_length": float(np.mean(run_lengths)),
+        "mutation_run_max_length": float(max(run_lengths)),
+        "mutation_span_fraction": float(span_fraction),
+        "mutation_position_entropy": position_entropy(positions, len(seq_a), entropy_bins),
+    }
+
+
+def compute_representation_drift(
+    source_features: torch.Tensor,
+    edited_features: torch.Tensor,
+) -> Dict[str, np.ndarray]:
+    deltas = edited_features - source_features
+    l2 = torch.norm(deltas, p=2, dim=1).cpu().numpy()
+    cos = F.cosine_similarity(edited_features, source_features, dim=1).cpu().numpy()
+    return {
+        "representation_l2": l2,
+        "representation_cosine": cos,
+    }
+
+
+def summarize_representation_drift(
+    drift: Dict[str, np.ndarray],
+) -> Dict[str, float]:
+    l2 = drift["representation_l2"]
+    cos = drift["representation_cosine"]
+    return {
+        "representation_l2_mean": float(np.mean(l2)),
+        "representation_l2_median": float(np.median(l2)),
+        "representation_cosine_mean": float(np.mean(cos)),
+        "representation_cosine_median": float(np.median(cos)),
+    }
+
+
+def summarize_mutation_patterns(
+    results_df: pd.DataFrame,
+    source_seqs: Sequence[str],
+    edited_seqs: Sequence[str],
+    entropy_bins: int,
+) -> Dict[str, float]:
+    per_seq = [mutation_pattern_metrics(src, edt, entropy_bins) for src, edt in zip(source_seqs, edited_seqs)]
+    metrics = pd.DataFrame(per_seq)
+
+    all_relative_positions = []
+    for src, edt in zip(source_seqs, edited_seqs):
+        for pos in mutation_positions(src, edt):
+            all_relative_positions.append((pos, len(src)))
+    if all_relative_positions:
+        counts = np.zeros(entropy_bins, dtype=float)
+        for pos, seq_len in all_relative_positions:
+            rel = min(max(pos / max(seq_len - 1, 1), 0.0), 1.0)
+            bin_idx = min(entropy_bins - 1, int(rel * entropy_bins))
+            counts[bin_idx] += 1.0
+        probs = counts[counts > 0] / counts.sum()
+        global_entropy = float((-(probs * np.log(probs)).sum()) / np.log(entropy_bins))
+    else:
+        global_entropy = 0.0
+
+    summary = {f"{col}_mean": float(metrics[col].mean()) for col in metrics.columns}
+    summary["global_mutation_position_entropy"] = global_entropy
+    return summary
+
+
+def maybe_compute_round_metrics(
+    round_sequences_by_source: Sequence[Sequence[str]],
+    source_features: torch.Tensor,
+    source_scores: Dict[str, np.ndarray],
+    source_seqs: Sequence[str],
+    model,
+    alphabet,
+    device: str,
+    predictors: Sequence[PredictorBundle],
+    entropy_bins: int,
+) -> List[Dict[str, float]]:
+    if not round_sequences_by_source:
+        return []
+
+    max_rounds = max(len(seq_rounds) for seq_rounds in round_sequences_by_source)
+    round_metrics = []
+    prev_round_seqs = list(source_seqs)
+    prev_round_features = source_features
+    for round_idx in range(max_rounds):
+        round_seqs = []
+        for seq_rounds in round_sequences_by_source:
+            chosen_idx = min(round_idx, len(seq_rounds) - 1)
+            round_seqs.append(seq_rounds[chosen_idx])
+        round_scores, round_features = evaluate_predictors(round_seqs, model, alphabet, device, predictors)
+        drift = compute_representation_drift(source_features, round_features)
+        step_drift = compute_representation_drift(prev_round_features, round_features)
+        round_hamming = np.asarray(
+            [hamming_distance(src, cur) for src, cur in zip(source_seqs, round_seqs)],
+            dtype=float,
+        )
+        step_hamming = np.asarray(
+            [hamming_distance(prev, cur) for prev, cur in zip(prev_round_seqs, round_seqs)],
+            dtype=float,
+        )
+        round_identity = np.asarray(
+            [1.0 - (hd / max(len(src), 1)) for src, hd in zip(source_seqs, round_hamming)],
+            dtype=float,
+        )
+        pattern_df = pd.DataFrame(
+            [mutation_pattern_metrics(src, cur, entropy_bins) for src, cur in zip(source_seqs, round_seqs)]
+        )
+        row = {
+            "round": int(round_idx + 1),
+            "representation_l2_mean": float(np.mean(drift["representation_l2"])),
+            "representation_cosine_mean": float(np.mean(drift["representation_cosine"])),
+            "step_representation_l2_mean": float(np.mean(step_drift["representation_l2"])),
+            "step_representation_cosine_mean": float(np.mean(step_drift["representation_cosine"])),
+            "hamming_mean": float(round_hamming.mean()),
+            "percent_identity_mean": float(round_identity.mean()),
+            "step_hamming_mean": float(step_hamming.mean()),
+        }
+        for col in pattern_df.columns:
+            row[f"{col}_mean"] = float(pattern_df[col].mean())
+        for predictor_name, scores in round_scores.items():
+            row[f"{predictor_name}_mean"] = float(np.mean(scores))
+            row[f"delta_{predictor_name}_mean"] = float(np.mean(scores - source_scores[predictor_name]))
+        round_metrics.append(row)
+        prev_round_seqs = round_seqs
+        prev_round_features = round_features
+    return round_metrics
+
+
+def maybe_compute_nearest_natural_identity(
+    seqs: Sequence[str],
+    args: argparse.Namespace,
+) -> Tuple[Optional[np.ndarray], Dict[str, object]]:
+    if not args.natural_db_path:
+        return None, {"nearest_natural_status": "not_requested"}
+
+    db_seqs = load_sequence_db(args.natural_db_path, args.natural_db_sequence_col, args.natural_db_max_seqs)
+    if not db_seqs:
+        return None, {"nearest_natural_status": "empty_db"}
+
+    identities = []
+    for seq in seqs:
+        best = max(normalized_edit_similarity(seq, db_seq) for db_seq in db_seqs)
+        identities.append(best)
+
+    arr = np.asarray(identities, dtype=float)
+    return arr, {
+        "nearest_natural_status": "ok",
+        "nearest_natural_db_size": int(len(db_seqs)),
+        "nearest_natural_identity_mean": float(arr.mean()),
+        "nearest_natural_identity_median": float(np.median(arr)),
+        "nearest_natural_identity_max": float(arr.max()),
+    }
+
+
+def maybe_compute_plddt(
+    seqs: Sequence[str],
+    args: argparse.Namespace,
+) -> Tuple[Optional[np.ndarray], Dict[str, object]]:
+    if not args.compute_plddt:
+        return None, {"plddt_status": "not_requested"}
+
+    try:
+        import esm
+        model = esm.pretrained.esmfold_v1()
+        model = model.to(args.device)
+        model.eval()
+    except Exception as exc:
+        return None, {"plddt_status": f"unavailable: {exc}"}
+
+    mean_plddts = []
+    for seq in seqs:
+        output = model.infer(seq)
+        mean_plddts.append(float(output["mean_plddt"][0].detach().cpu().item()))
+    arr = np.asarray(mean_plddts, dtype=float)
+    return arr, {
+        "plddt_status": "ok",
+        "mean_plddt_mean": float(arr.mean()),
+        "mean_plddt_median": float(np.median(arr)),
+        "mean_plddt_min": float(arr.min()),
+        "mean_plddt_max": float(arr.max()),
+    }
+
+
 def summarize_diversity(seqs: Sequence[str], max_pairs: int, seed: int) -> Dict[str, float]:
     unique_fraction = len(set(seqs)) / max(len(seqs), 1)
     if len(seqs) < 2:
-        return {"unique_fraction": unique_fraction, "pairwise_hamming_mean": 0.0}
+        return {
+            "unique_fraction": unique_fraction,
+            "pairwise_hamming_mean": 0.0,
+            "pairwise_edit_similarity_mean": 1.0,
+        }
 
     rng = np.random.default_rng(seed)
     pairs = []
@@ -654,15 +980,20 @@ def summarize_diversity(seqs: Sequence[str], max_pairs: int, seed: int) -> Dict[
             pairs.append(key)
 
     distances = []
+    edit_similarities = []
     for i, j in pairs:
         if len(seqs[i]) != len(seqs[j]):
+            edit_similarities.append(normalized_edit_similarity(seqs[i], seqs[j]))
             continue
         distances.append(hamming_distance(seqs[i], seqs[j]) / max(len(seqs[i]), 1))
+        edit_similarities.append(normalized_edit_similarity(seqs[i], seqs[j]))
 
     pairwise_mean = float(np.mean(distances)) if distances else 0.0
+    pairwise_edit_similarity_mean = float(np.mean(edit_similarities)) if edit_similarities else 1.0
     return {
         "unique_fraction": float(unique_fraction),
         "pairwise_hamming_mean": pairwise_mean,
+        "pairwise_edit_similarity_mean": pairwise_edit_similarity_mean,
     }
 
 
@@ -675,9 +1006,14 @@ def summarize_primary_metrics(
     top_k_values = {}
     for k in [1, 5, 10]:
         actual_k = min(k, len(results_df))
-        top_k_values[f"top_{k}_{primary_col}_mean"] = float(
-            results_df.nlargest(actual_k, primary_col)[primary_col].mean()
+        edited_top = results_df.nlargest(actual_k, primary_col)
+        source_top = results_df.nlargest(actual_k, f"source_{primary_col}")
+        top_k_values[f"top_{k}_{primary_col}_mean"] = float(edited_top[primary_col].mean())
+        top_k_values[f"source_top_{k}_{primary_col}_mean"] = float(source_top[f"source_{primary_col}"].mean())
+        top_k_values[f"delta_top_{k}_{primary_col}_mean"] = float(
+            edited_top[primary_col].mean() - source_top[f"source_{primary_col}"].mean()
         )
+        top_k_values[f"top_{k}_success_rate"] = float((edited_top[f"delta_{primary_col}"] > 0).mean())
 
     gain_per_mut = np.divide(
         deltas,
@@ -703,9 +1039,9 @@ def summarize_primary_metrics(
 def maybe_compute_ppl(
     seqs: Sequence[str],
     args: argparse.Namespace,
-) -> Optional[Dict[str, float]]:
+) -> Tuple[Optional[np.ndarray], Dict[str, object]]:
     if args.skip_ppl:
-        return None
+        return None, {"ppl_status": "skipped"}
     if len(args.ppl_gpu_ids) > 1:
         ppls = compute_pseudo_perplexity_multi_gpu(
             list(seqs),
@@ -718,11 +1054,35 @@ def maybe_compute_ppl(
         model, alphabet = load_esm2_model(args.ppl_model, device=device)
         ppls = compute_pseudo_perplexity(list(seqs), model, alphabet, device, args.ppl_batch_masks)
     arr = np.asarray(ppls, dtype=float)
-    return {
+    return arr, {
+        "ppl_status": "ok",
         "ppl_mean": float(arr.mean()),
         "ppl_median": float(np.median(arr)),
         "ppl_std": float(arr.std()),
     }
+
+
+def summarize_round_trajectories(
+    round_metrics: Sequence[Dict[str, float]],
+    primary_metric: str,
+) -> Dict[str, float]:
+    if not round_metrics:
+        return {}
+
+    round_df = pd.DataFrame(round_metrics).sort_values("round")
+    summary = {
+        "round_count": int(len(round_df)),
+        f"delta_{primary_metric}_auc": float(np.trapz(round_df[f"delta_{primary_metric}_mean"], round_df["round"])),
+        "representation_l2_auc": float(np.trapz(round_df["representation_l2_mean"], round_df["round"])),
+        "hamming_auc": float(np.trapz(round_df["hamming_mean"], round_df["round"])),
+    }
+
+    best_idx = int(round_df[f"{primary_metric}_mean"].idxmax())
+    best_row = round_df.loc[best_idx]
+    summary[f"best_round_by_{primary_metric}"] = int(best_row["round"])
+    summary[f"best_round_{primary_metric}_mean"] = float(best_row[f"{primary_metric}_mean"])
+    summary[f"best_round_delta_{primary_metric}_mean"] = float(best_row[f"delta_{primary_metric}_mean"])
+    return summary
 
 
 def main() -> None:
@@ -768,7 +1128,7 @@ def main() -> None:
     ]
 
     source_seqs = input_df[args.sequence_col].tolist()
-    source_scores = evaluate_predictors(source_seqs, model, alphabet, args.device, predictors)
+    source_scores, source_features = evaluate_predictors(source_seqs, model, alphabet, args.device, predictors)
 
     alignment_projector = build_alignment_projector("identity")
     primary_metric = args.property
@@ -779,7 +1139,7 @@ def main() -> None:
         "notes": {
             "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
             "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
-            "optional_metrics_not_in_mvp": ["pLDDT", "nearest_neighbor_identity_to_natural_db"],
+            "optional_metrics_not_in_mvp": [],
         },
     }
 
@@ -789,6 +1149,7 @@ def main() -> None:
         rng = np.random.default_rng(args.seed)
         edited_rows = []
         edited_seqs = []
+        round_sequences_by_source = []
 
         for row_idx, source_seq in enumerate(source_seqs):
             steering_vectors = None if mode == "no_steering" else steering_vectors_selected
@@ -811,6 +1172,7 @@ def main() -> None:
             )
             edited_seq = edit_result["edited_sequence"]
             edited_seqs.append(edited_seq)
+            round_sequences_by_source.append(edit_result["round_sequences"])
             hd = hamming_distance(source_seq, edited_seq)
             edited_rows.append({
                 "source_index": row_idx,
@@ -824,7 +1186,7 @@ def main() -> None:
                 "percent_identity_to_source": 1.0 - (hd / max(len(source_seq), 1)),
             })
 
-        edited_scores = evaluate_predictors(edited_seqs, model, alphabet, args.device, predictors)
+        edited_scores, edited_features = evaluate_predictors(edited_seqs, model, alphabet, args.device, predictors)
         result_df = pd.DataFrame(edited_rows)
         for predictor_name in ["sol", "therm"]:
             result_df[predictor_name] = edited_scores[predictor_name]
@@ -833,21 +1195,101 @@ def main() -> None:
                 result_df[predictor_name] - result_df[f"source_{predictor_name}"]
             )
 
+        rep_drift = compute_representation_drift(source_features, edited_features)
+        result_df["representation_l2"] = rep_drift["representation_l2"]
+        result_df["representation_cosine"] = rep_drift["representation_cosine"]
+
+        pattern_df = pd.DataFrame(
+            [mutation_pattern_metrics(src, edt, args.mutation_entropy_bins) for src, edt in zip(source_seqs, edited_seqs)]
+        )
+        for col in pattern_df.columns:
+            result_df[col] = pattern_df[col].to_numpy()
+
         if score_col is not None:
             result_df["input_score"] = input_df[score_col].to_numpy()
 
-        ppl_summary = maybe_compute_ppl(edited_seqs, args)
+        source_nearest_natural_identity, source_natural_summary = maybe_compute_nearest_natural_identity(source_seqs, args)
+        nearest_natural_identity, natural_summary = maybe_compute_nearest_natural_identity(edited_seqs, args)
+        if source_nearest_natural_identity is not None and nearest_natural_identity is not None:
+            result_df["source_nearest_natural_identity"] = source_nearest_natural_identity
+            result_df["nearest_natural_identity"] = nearest_natural_identity
+            result_df["delta_nearest_natural_identity"] = (
+                result_df["nearest_natural_identity"] - result_df["source_nearest_natural_identity"]
+            )
+
+        source_plddt_values, source_plddt_summary = maybe_compute_plddt(source_seqs, args)
+        plddt_values, plddt_summary = maybe_compute_plddt(edited_seqs, args)
+        if source_plddt_values is not None and plddt_values is not None:
+            result_df["source_mean_plddt"] = source_plddt_values
+            result_df["mean_plddt"] = plddt_values
+            result_df["delta_mean_plddt"] = result_df["mean_plddt"] - result_df["source_mean_plddt"]
+
+        source_ppl_values, source_ppl_summary = maybe_compute_ppl(source_seqs, args)
+        ppl_values, ppl_summary = maybe_compute_ppl(edited_seqs, args)
+        if source_ppl_values is not None and ppl_values is not None:
+            result_df["source_ppl"] = source_ppl_values
+            result_df["ppl"] = ppl_values
+            result_df["delta_ppl"] = result_df["ppl"] - result_df["source_ppl"]
         diversity_summary = summarize_diversity(edited_seqs, args.diversity_pairs, args.seed)
         primary_summary = summarize_primary_metrics(result_df, primary_metric)
+        rep_summary = summarize_representation_drift(rep_drift)
+        mutation_summary = summarize_mutation_patterns(
+            result_df,
+            source_seqs,
+            edited_seqs,
+            args.mutation_entropy_bins,
+        )
+        round_metrics = maybe_compute_round_metrics(
+            round_sequences_by_source,
+            source_features,
+            source_scores,
+            source_seqs,
+            model,
+            alphabet,
+            args.device,
+            predictors,
+            args.mutation_entropy_bins,
+        )
+        round_summary = summarize_round_trajectories(round_metrics, primary_metric)
         sol_threshold_cross = (
             (result_df["source_sol"] < 0.5) & (result_df["sol"] >= 0.5)
         ).mean()
 
         summary = {
             **primary_summary,
+            **rep_summary,
+            **mutation_summary,
             **diversity_summary,
+            **round_summary,
             "sol_threshold_cross_rate": float(sol_threshold_cross),
+            **natural_summary,
+            **plddt_summary,
         }
+        if source_natural_summary.get("nearest_natural_status") == "ok" and natural_summary.get("nearest_natural_status") == "ok":
+            summary.update({
+                "source_nearest_natural_identity_mean": float(source_nearest_natural_identity.mean()),
+                "source_nearest_natural_identity_median": float(np.median(source_nearest_natural_identity)),
+                "delta_nearest_natural_identity_mean": float(
+                    (nearest_natural_identity - source_nearest_natural_identity).mean()
+                ),
+                "delta_nearest_natural_identity_median": float(
+                    np.median(nearest_natural_identity - source_nearest_natural_identity)
+                ),
+            })
+        if source_plddt_summary.get("plddt_status") == "ok" and plddt_summary.get("plddt_status") == "ok":
+            summary.update({
+                "source_mean_plddt_mean": float(source_plddt_values.mean()),
+                "source_mean_plddt_median": float(np.median(source_plddt_values)),
+                "delta_mean_plddt_mean": float((plddt_values - source_plddt_values).mean()),
+                "delta_mean_plddt_median": float(np.median(plddt_values - source_plddt_values)),
+            })
+        if source_ppl_summary.get("ppl_status") == "ok" and ppl_summary.get("ppl_status") == "ok":
+            summary.update({
+                "source_ppl_mean": float(source_ppl_values.mean()),
+                "source_ppl_median": float(np.median(source_ppl_values)),
+                "delta_ppl_mean": float((ppl_values - source_ppl_values).mean()),
+                "delta_ppl_median": float(np.median(ppl_values - source_ppl_values)),
+            })
         if ppl_summary is not None:
             summary.update(ppl_summary)
 
@@ -856,6 +1298,7 @@ def main() -> None:
         run_summary["results"][mode] = {
             "summary": summary,
             "csv_path": csv_path,
+            "round_metrics": round_metrics,
         }
 
     summary_path = os.path.join(args.output_dir, "summary.json")
