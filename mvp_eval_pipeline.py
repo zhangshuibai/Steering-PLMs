@@ -19,9 +19,12 @@ Notes
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
+import shlex
+import subprocess
 import types
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,7 +133,97 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--natural_db_sequence_col", default="sequence")
     parser.add_argument("--natural_db_max_seqs", type=int, default=None)
     parser.add_argument("--compute_plddt", action="store_true",
-                        help="Optionally run ESMFold and report pLDDT metrics if dependencies are available.")
+                        help="Optionally compute and report pLDDT metrics.")
+    parser.add_argument(
+        "--plddt_backend",
+        default="esmfold",
+        choices=["esmfold", "colabfold"],
+        help="Backend used for pLDDT. 'colabfold' shells out to an external colabfold_batch command.",
+    )
+    parser.add_argument(
+        "--plddt_cache_csv",
+        default=None,
+        help="Optional shared CSV cache for pLDDT results across runs.",
+    )
+    parser.add_argument(
+        "--colabfold_batch_cmd",
+        default="colabfold_batch",
+        help="Executable used when --plddt_backend colabfold.",
+    )
+    parser.add_argument(
+        "--colabfold_msa_mode",
+        default="mmseqs2_uniref_env",
+        choices=[
+            "mmseqs2_uniref_env",
+            "mmseqs2_uniref_env_envpair",
+            "mmseqs2_uniref",
+            "single_sequence",
+        ],
+        help="MSA mode passed to colabfold_batch. Defaults to the official MMseqs2 server-backed mode.",
+    )
+    parser.add_argument(
+        "--colabfold_model_type",
+        default="alphafold2_ptm",
+        choices=[
+            "auto",
+            "alphafold2",
+            "alphafold2_ptm",
+            "alphafold2_multimer_v1",
+            "alphafold2_multimer_v2",
+            "alphafold2_multimer_v3",
+            "deepfold_v1",
+        ],
+        help="AlphaFold model type passed to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_rank",
+        default="plddt",
+        choices=["auto", "plddt", "ptm", "iptm", "multimer"],
+        help="Ranking metric passed to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_num_models",
+        type=int,
+        default=1,
+        choices=[1, 2, 3, 4, 5],
+        help="Number of AlphaFold models to evaluate in ColabFold.",
+    )
+    parser.add_argument(
+        "--colabfold_num_seeds",
+        type=int,
+        default=1,
+        help="Number of seeds passed to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_data_dir",
+        default=None,
+        help="Optional AlphaFold weights directory passed via --data to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_host_url",
+        default=None,
+        help="Optional MSA server URL passed to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_templates",
+        action="store_true",
+        help="Request templates in the ColabFold/MMseqs2 workflow.",
+    )
+    parser.add_argument(
+        "--colabfold_overwrite_existing_results",
+        action="store_true",
+        help="Pass --overwrite-existing-results to colabfold_batch.",
+    )
+    parser.add_argument(
+        "--colabfold_batch_args",
+        default="",
+        help="Extra arguments passed to colabfold_batch before the input/output paths.",
+    )
+    parser.add_argument(
+        "--colabfold_output_dir",
+        default=None,
+        help="Optional root directory for ColabFold intermediate/output files.",
+    )
     return parser.parse_args()
 
 
@@ -928,6 +1021,16 @@ def maybe_compute_plddt(
     if not args.compute_plddt:
         return None, {"plddt_status": "not_requested"}
 
+    if args.plddt_backend == "colabfold":
+        return maybe_compute_plddt_colabfold(seqs, args)
+
+    return maybe_compute_plddt_esmfold(seqs, args)
+
+
+def maybe_compute_plddt_esmfold(
+    seqs: Sequence[str],
+    args: argparse.Namespace,
+) -> Tuple[Optional[np.ndarray], Dict[str, object]]:
     try:
         import esm
         model = esm.pretrained.esmfold_v1()
@@ -942,12 +1045,219 @@ def maybe_compute_plddt(
         mean_plddts.append(float(output["mean_plddt"][0].detach().cpu().item()))
     arr = np.asarray(mean_plddts, dtype=float)
     return arr, {
+        "plddt_backend": "esmfold",
         "plddt_status": "ok",
         "mean_plddt_mean": float(arr.mean()),
         "mean_plddt_median": float(np.median(arr)),
         "mean_plddt_min": float(arr.min()),
         "mean_plddt_max": float(arr.max()),
     }
+
+
+def resolve_plddt_cache_path(args: argparse.Namespace) -> Path:
+    if args.plddt_cache_csv:
+        return Path(args.plddt_cache_csv)
+    return Path(args.output_dir) / f"plddt_cache_{args.plddt_backend}.csv"
+
+
+def load_plddt_cache(cache_path: Path) -> Dict[str, Dict[str, object]]:
+    if not cache_path.exists():
+        return {}
+    df = pd.read_csv(cache_path)
+    required = {"sequence", "mean_plddt"}
+    if not required.issubset(df.columns):
+        return {}
+
+    cache = {}
+    for row in df.to_dict(orient="records"):
+        seq = row["sequence"]
+        if not isinstance(seq, str) or not seq:
+            continue
+        try:
+            mean_plddt = float(row["mean_plddt"])
+        except (TypeError, ValueError):
+            continue
+        cache[seq] = {
+            "mean_plddt": mean_plddt,
+            "artifact_path": row.get("artifact_path"),
+            "backend": row.get("backend", "colabfold"),
+        }
+    return cache
+
+
+def write_plddt_cache(cache_path: Path, cache: Dict[str, Dict[str, object]]) -> None:
+    ensure_dir(str(cache_path.parent))
+    rows = []
+    for seq, payload in cache.items():
+        rows.append({
+            "sequence_sha1": hashlib.sha1(seq.encode()).hexdigest(),
+            "sequence": seq,
+            "mean_plddt": payload["mean_plddt"],
+            "artifact_path": payload.get("artifact_path"),
+            "backend": payload.get("backend", "colabfold"),
+        })
+    df = pd.DataFrame(rows).sort_values("sequence_sha1") if rows else pd.DataFrame(
+        columns=["sequence_sha1", "sequence", "mean_plddt", "artifact_path", "backend"]
+    )
+    df.to_csv(cache_path, index=False)
+
+
+def parse_mean_plddt_from_pdb(pdb_path: Path) -> float:
+    ca_values = []
+    atom_values = []
+    with pdb_path.open() as handle:
+        for line in handle:
+            if not line.startswith("ATOM"):
+                continue
+            try:
+                b_factor = float(line[60:66].strip())
+            except ValueError:
+                continue
+            atom_values.append(b_factor)
+            atom_name = line[12:16].strip()
+            if atom_name == "CA":
+                ca_values.append(b_factor)
+
+    values = ca_values if ca_values else atom_values
+    if not values:
+        raise ValueError(f"No ATOM records with B-factors found in {pdb_path}")
+    return float(np.mean(values))
+
+
+def pick_colabfold_prediction_file(output_dir: Path, seq_id: str) -> Optional[Path]:
+    candidates = sorted(output_dir.rglob(f"{seq_id}*.pdb"))
+    if not candidates:
+        return None
+
+    def sort_key(path: Path) -> Tuple[int, int, str]:
+        name = path.name
+        rank_score = 0 if "rank_001" in name else 1
+        relaxed_score = 0 if "relaxed" in name else 1
+        return (rank_score, relaxed_score, name)
+
+    return sorted(candidates, key=sort_key)[0]
+
+
+def run_colabfold_batch(
+    fasta_path: Path,
+    output_dir: Path,
+    args: argparse.Namespace,
+) -> Tuple[bool, str]:
+    cmd = build_colabfold_batch_command(fasta_path, output_dir, args)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError as exc:
+        return False, str(exc)
+    combined_output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    return proc.returncode == 0, combined_output.strip()
+
+
+def build_colabfold_batch_command(
+    fasta_path: Path,
+    output_dir: Path,
+    args: argparse.Namespace,
+) -> List[str]:
+    cmd = [args.colabfold_batch_cmd]
+    if args.colabfold_msa_mode:
+        cmd.extend(["--msa-mode", args.colabfold_msa_mode])
+    if args.colabfold_model_type:
+        cmd.extend(["--model-type", args.colabfold_model_type])
+    if args.colabfold_rank:
+        cmd.extend(["--rank", args.colabfold_rank])
+    if args.colabfold_num_models:
+        cmd.extend(["--num-models", str(args.colabfold_num_models)])
+    if args.colabfold_num_seeds:
+        cmd.extend(["--num-seeds", str(args.colabfold_num_seeds)])
+    if args.colabfold_data_dir:
+        cmd.extend(["--data", args.colabfold_data_dir])
+    if args.colabfold_host_url:
+        cmd.extend(["--host-url", args.colabfold_host_url])
+    if args.colabfold_templates:
+        cmd.append("--templates")
+    if args.colabfold_overwrite_existing_results:
+        cmd.append("--overwrite-existing-results")
+    if args.colabfold_batch_args:
+        cmd.extend(shlex.split(args.colabfold_batch_args))
+    cmd.extend([str(fasta_path), str(output_dir)])
+    return cmd
+
+
+def maybe_compute_plddt_colabfold(
+    seqs: Sequence[str],
+    args: argparse.Namespace,
+) -> Tuple[Optional[np.ndarray], Dict[str, object]]:
+    cache_path = resolve_plddt_cache_path(args)
+    cache = load_plddt_cache(cache_path)
+    missing = []
+    for seq in seqs:
+        if seq not in cache:
+            missing.append(seq)
+
+    missing = list(dict.fromkeys(missing))
+    colabfold_output_dir = Path(args.colabfold_output_dir) if args.colabfold_output_dir else Path(args.output_dir) / "plddt_colabfold"
+    batch_output = ""
+
+    if missing:
+        ensure_dir(str(colabfold_output_dir))
+        batch_digest = hashlib.sha1("".join(missing).encode()).hexdigest()[:12]
+        batch_dir = colabfold_output_dir / f"batch_{batch_digest}"
+        ensure_dir(str(batch_dir))
+        fasta_path = batch_dir / "queries.fa"
+
+        seq_id_to_seq = {}
+        with fasta_path.open("w") as handle:
+            for idx, seq in enumerate(missing):
+                seq_digest = hashlib.sha1(seq.encode()).hexdigest()[:12]
+                seq_id = f"seq_{idx:05d}_{seq_digest}"
+                seq_id_to_seq[seq_id] = seq
+                handle.write(f">{seq_id}\n{seq}\n")
+
+        ok, batch_output = run_colabfold_batch(fasta_path, batch_dir, args)
+        if not ok:
+            return None, {
+                "plddt_backend": "colabfold",
+                "plddt_status": f"unavailable: {batch_output or 'colabfold_batch failed'}",
+                "plddt_cache_csv": str(cache_path),
+            }
+
+        for seq_id, seq in seq_id_to_seq.items():
+            pdb_path = pick_colabfold_prediction_file(batch_dir, seq_id)
+            if pdb_path is None:
+                return None, {
+                    "plddt_backend": "colabfold",
+                    "plddt_status": f"unavailable: no prediction PDB found for {seq_id}",
+                    "plddt_cache_csv": str(cache_path),
+                    "colabfold_output_dir": str(batch_dir),
+                }
+            cache[seq] = {
+                "mean_plddt": parse_mean_plddt_from_pdb(pdb_path),
+                "artifact_path": str(pdb_path),
+                "backend": "colabfold",
+            }
+
+        write_plddt_cache(cache_path, cache)
+
+    values = [cache[seq]["mean_plddt"] for seq in seqs if seq in cache]
+    if len(values) != len(seqs):
+        return None, {
+            "plddt_backend": "colabfold",
+            "plddt_status": "unavailable: missing cache entries after ColabFold run",
+            "plddt_cache_csv": str(cache_path),
+        }
+
+    arr = np.asarray(values, dtype=float)
+    summary = {
+        "plddt_backend": "colabfold",
+        "plddt_status": "ok",
+        "plddt_cache_csv": str(cache_path),
+        "mean_plddt_mean": float(arr.mean()),
+        "mean_plddt_median": float(np.median(arr)),
+        "mean_plddt_min": float(arr.min()),
+        "mean_plddt_max": float(arr.max()),
+    }
+    if batch_output:
+        summary["plddt_backend_message"] = batch_output[-500:]
+    return arr, summary
 
 
 def summarize_diversity(seqs: Sequence[str], max_pairs: int, seed: int) -> Dict[str, float]:

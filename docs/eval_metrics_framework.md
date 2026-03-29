@@ -81,7 +81,7 @@ Optional when enabled:
 
 - nearest-natural identity
 - pseudo-perplexity (`ppl`)
-- pLDDT via ESMFold
+- pLDDT via either ESMFold or ColabFold
 
 For nearest-natural identity and `ppl`, the pipeline also reports source values and edited-source deltas.
 
@@ -134,13 +134,32 @@ You still need to provide a natural sequence database through:
 
 Without that file, nearest-natural metrics are skipped.
 
-### ESMFold dependencies for pLDDT
+### Structure backend for pLDDT
 
-The code already handles pLDDT as an optional metric, but on this machine ESMFold is not fully installed. The current graceful status is:
+The pipeline now supports two optional pLDDT backends:
+
+- `--plddt_backend esmfold`
+- `--plddt_backend colabfold`
+
+For `colabfold`, the recommended default is now the official AlphaFold2 + MMseqs2-style flow:
+
+- `--colabfold_msa_mode mmseqs2_uniref_env`
+- `--colabfold_model_type alphafold2_ptm`
+- `--colabfold_rank plddt`
+- `--colabfold_num_models 1`
+- `--colabfold_num_seeds 1`
+
+If the selected backend is unavailable, the run degrades gracefully instead of failing. For example:
 
 - `plddt_status: "unavailable: No module named 'omegaconf'"`
 
-So the framework is ready for pLDDT, but the environment still needs the missing ESMFold dependencies before this metric becomes active.
+For ColabFold runs, a shared cache file is strongly recommended:
+
+```bash
+--plddt_cache_csv results/shared_plddt_cache.csv
+```
+
+That keeps source-sequence structure predictions reusable across multiple experiment runs.
 
 ## Recommended next experiments
 
@@ -148,4 +167,4 @@ If we want the most informative benchmark tables next, the best additions are:
 
 1. rerun the full sol / therm experiments with a natural DB path
 2. decide whether we want full `ppl` on every run or only on shortlisted modes, since it materially increases runtime
-3. install the missing ESMFold deps only if pLDDT is important enough to justify the extra setup and runtime
+3. prefer the ColabFold backend when ESMFold environment issues are the main blocker for pLDDT

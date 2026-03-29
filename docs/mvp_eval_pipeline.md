@@ -147,7 +147,7 @@ Useful flags:
 
 Lower pPPL is generally more protein-like.
 
-### pLDDT via ESMFold
+### pLDDT
 
 Enable with:
 
@@ -155,9 +155,53 @@ Enable with:
 --compute_plddt
 ```
 
-If local ESMFold dependencies are incomplete, the run does not fail. Instead, the summary records:
+Backend selection:
+
+```bash
+--plddt_backend esmfold
+```
+
+or
+
+```bash
+--plddt_backend colabfold
+```
+
+Useful ColabFold flags:
+
+- `--colabfold_batch_cmd`
+- `--colabfold_msa_mode`
+- `--colabfold_model_type`
+- `--colabfold_rank`
+- `--colabfold_num_models`
+- `--colabfold_num_seeds`
+- `--colabfold_data_dir`
+- `--colabfold_host_url`
+- `--colabfold_templates`
+- `--colabfold_overwrite_existing_results`
+- `--colabfold_batch_args`
+- `--colabfold_output_dir`
+- `--plddt_cache_csv`
+
+Practical note:
+
+- the built-in ColabFold backend now defaults to an AlphaFold2 + MMseqs2-style invocation
+- specifically, the default `--colabfold_msa_mode` is `mmseqs2_uniref_env`
+- this matches the official ColabFold notebook/server-backed workflow more closely than the earlier single-sequence fallback
+- for Colab notebooks, direct `colabfold_batch` is usually the right path
+- for larger cluster workflows, it is often better to use a wrapper command that performs local `colabfold_search` plus `colabfold_batch`
+- you can point `--colabfold_batch_cmd` at that wrapper as long as it accepts the same trailing `input_fasta output_dir` arguments
+- an example wrapper is included at [`run_colabfold_local.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_colabfold_local.sh)
+
+Recommended pattern for multi-run suites:
+
+- point all four runs at the same `--plddt_cache_csv`
+- this avoids recomputing source-sequence structures across random / ASPO and sol / therm runs
+
+If the selected backend is unavailable, the run does not fail. Instead, the summary records:
 
 - `plddt_status: "unavailable: ..."`
+- `plddt_backend: "esmfold"` or `"colabfold"`
 
 ## Example commands
 
@@ -189,6 +233,40 @@ python mvp_eval_pipeline.py \
   --device cuda:0 \
   --ppl_gpu_ids 0 1 2 3
 ```
+
+Using ColabFold for pLDDT with a shared cache:
+
+```bash
+python mvp_eval_pipeline.py \
+  --property sol \
+  --input_csv data/N_sol_test.csv \
+  --family_csv data/sol_filtered.csv \
+  --output_dir results/mvp_sol_random_colabfold \
+  --mask_strategy random \
+  --device cuda:0 \
+  --compute_plddt \
+  --plddt_backend colabfold \
+  --colabfold_batch_cmd colabfold_batch \
+  --colabfold_msa_mode mmseqs2_uniref_env \
+  --colabfold_model_type alphafold2_ptm \
+  --colabfold_rank plddt \
+  --colabfold_num_models 1 \
+  --colabfold_num_seeds 1 \
+  --plddt_cache_csv results/shared_plddt_cache.csv
+```
+
+Small UniRef50 smoke test with the direct ColabFold AlphaFold2/MMseqs2 backend:
+
+```bash
+export COLABFOLD_CMD=/path/to/colabfold_batch
+export COLABFOLD_DATA_DIR=/path/to/alphafold_weights
+./scripts/run_uniref50_colabfold_af2_smoke.sh sol random
+```
+
+Helper script:
+
+- [`run_uniref50_colabfold_af2_smoke.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_uniref50_colabfold_af2_smoke.sh)
+- [`run_uniref50_colabfold_smoke.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_uniref50_colabfold_smoke.sh)
 
 ## Expected input columns
 
