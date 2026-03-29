@@ -148,6 +148,7 @@ For `colabfold`, the recommended default is now the official AlphaFold2 + MMseqs
 - `--colabfold_rank plddt`
 - `--colabfold_num_models 1`
 - `--colabfold_num_seeds 1`
+- `--colabfold_data_dir /scratch/$USER/colabfold` on a GPU server so weights are reused across runs
 
 If the selected backend is unavailable, the run degrades gracefully instead of failing. For example:
 

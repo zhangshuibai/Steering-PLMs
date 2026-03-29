@@ -44,11 +44,14 @@ cd "$repo_root"
 
 : "${COLABFOLD_DB_DIR:?Set COLABFOLD_DB_DIR to your local ColabFold/MMseqs database directory.}"
 
+colabfold_data_dir="${COLABFOLD_DATA_DIR:-${HOME}/.cache/colabfold}"
 device="${DEVICE:-cuda}"
 n="${N_SMOKE:-2}"
 ppl_model="${PPL_MODEL:-150M}"
 output_dir="${OUTPUT_DIR:-results/colabfold_smoke_${property}_${mask_strategy}}"
 cache_csv="${PLDDT_CACHE_CSV:-results/shared_plddt_cache.csv}"
+
+mkdir -p "$colabfold_data_dir"
 
 python mvp_eval_pipeline.py \
   --property "$property" \
@@ -66,4 +69,5 @@ python mvp_eval_pipeline.py \
   --compute_plddt \
   --plddt_backend colabfold \
   --colabfold_batch_cmd ./scripts/run_colabfold_local.sh \
+  --colabfold_data_dir "$colabfold_data_dir" \
   --plddt_cache_csv "$cache_csv"

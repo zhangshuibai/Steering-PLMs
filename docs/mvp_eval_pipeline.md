@@ -188,10 +188,11 @@ Practical note:
 - the built-in ColabFold backend now defaults to an AlphaFold2 + MMseqs2-style invocation
 - specifically, the default `--colabfold_msa_mode` is `mmseqs2_uniref_env`
 - this matches the official ColabFold notebook/server-backed workflow more closely than the earlier single-sequence fallback
-- for Colab notebooks, direct `colabfold_batch` is usually the right path
-- for larger cluster workflows, it is often better to use a wrapper command that performs local `colabfold_search` plus `colabfold_batch`
-- you can point `--colabfold_batch_cmd` at that wrapper as long as it accepts the same trailing `input_fasta output_dir` arguments
-- an example wrapper is included at [`run_colabfold_local.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_colabfold_local.sh)
+- the recommended default on a GPU server is direct `colabfold_batch`
+- point `--colabfold_data_dir` at a persistent weights directory so the AlphaFold parameters are downloaded once
+- use a shared `--plddt_cache_csv` across runs so source sequences are folded once and reused
+- the local `colabfold_search` + `colabfold_batch` wrapper is still available as an advanced path when you already maintain a local MMseqs database
+- that advanced wrapper lives at [`run_colabfold_local.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_colabfold_local.sh)
 
 Recommended pattern for multi-run suites:
 
@@ -252,20 +253,40 @@ python mvp_eval_pipeline.py \
   --colabfold_rank plddt \
   --colabfold_num_models 1 \
   --colabfold_num_seeds 1 \
+  --colabfold_data_dir /scratch/$USER/colabfold \
   --plddt_cache_csv results/shared_plddt_cache.csv
 ```
 
-Small UniRef50 smoke test with the direct ColabFold AlphaFold2/MMseqs2 backend:
+Small UniRef50 smoke test with the recommended direct ColabFold + MMseqs2 backend:
 
 ```bash
-export COLABFOLD_CMD=/path/to/colabfold_batch
-export COLABFOLD_DATA_DIR=/path/to/alphafold_weights
+export COLABFOLD_DATA_DIR=/scratch/$USER/colabfold
+export DEVICE=cuda
 ./scripts/run_uniref50_colabfold_af2_smoke.sh sol random
 ```
 
-Helper script:
+Single full run with direct ColabFold + MMseqs2:
+
+```bash
+export COLABFOLD_DATA_DIR=/scratch/$USER/colabfold
+export DEVICE=cuda
+export OUTPUT_ROOT=results/mvp_colabfold_af2
+./scripts/run_uniref50_colabfold_af2_eval.sh sol random
+```
+
+Whole direct ColabFold suite across `sol/therm` and `random/aspo`:
+
+```bash
+export COLABFOLD_DATA_DIR=/scratch/$USER/colabfold
+export DEVICE=cuda
+export OUTPUT_ROOT=results/mvp_colabfold_af2_suite
+./scripts/run_uniref50_colabfold_af2_eval.sh all all
+```
+
+Helper scripts:
 
 - [`run_uniref50_colabfold_af2_smoke.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_uniref50_colabfold_af2_smoke.sh)
+- [`run_uniref50_colabfold_af2_eval.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_uniref50_colabfold_af2_eval.sh)
 - [`run_uniref50_colabfold_smoke.sh`](/Users/chloe/Desktop/project/protein/Steering-PLMs/scripts/run_uniref50_colabfold_smoke.sh)
 
 ## Expected input columns

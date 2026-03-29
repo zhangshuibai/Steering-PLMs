@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 <input_fasta> <output_dir>" >&2
+if [ "$#" -lt 2 ]; then
+  echo "Usage: $0 [colabfold_batch args...] <input_fasta> <output_dir>" >&2
   exit 2
 fi
 
-input_fasta="$1"
-output_dir="$2"
+args=("$@")
+arg_count="$#"
+input_fasta="${args[$((arg_count - 2))]}"
+output_dir="${args[$((arg_count - 1))]}"
+batch_args=("${args[@]:0:$((arg_count - 2))}")
 
 : "${COLABFOLD_DB_DIR:?Set COLABFOLD_DB_DIR to your local ColabFold/MMseqs database directory.}"
 
@@ -22,5 +25,4 @@ mkdir -p "$msa_dir" "$pred_dir"
 MMSEQS_IGNORE_INDEX="${MMSEQS_IGNORE_INDEX:-1}" \
   colabfold_search "$input_fasta" "$COLABFOLD_DB_DIR" "$msa_dir"
 
-colabfold_batch "$msa_dir" "$pred_dir"
-
+colabfold_batch "${batch_args[@]}" "$msa_dir" "$pred_dir"
