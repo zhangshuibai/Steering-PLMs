@@ -1,0 +1,86 @@
+{
+  "created_at": "2026-03-28T12:03:58.460611-05:00",
+  "config_path": "/Users/chloe/Desktop/project/protein/Steering-PLMs/configs/lysozyme_preprocess.smoke.json",
+  "output_dir": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output",
+  "input": {
+    "input_path": "data/lysozyme_smoke/mock_family_scored.csv",
+    "input_format": "csv"
+  },
+  "pool": {
+    "counts": {
+      "input_rows": 6,
+      "non_empty_rows": 6,
+      "length_filtered_rows": 6,
+      "canonical_rows": 6,
+      "deduplicated_rows": 6
+    },
+    "final_size": 6
+  },
+  "scoring": {
+    "scoring_enabled": false,
+    "mode": "passthrough"
+  },
+  "split": {
+    "train_fraction": 0.67,
+    "seed": 42,
+    "train_size": 4,
+    "test_size": 2
+  },
+  "selection": {
+    "positive_fraction": 0.34,
+    "negative_fraction": 0.34,
+    "test_target_size": 2,
+    "p_sol_train": {
+      "count": 2,
+      "fraction": 0.34,
+      "threshold": 0.63
+    },
+    "n_sol_train": {
+      "count": 2,
+      "fraction": 0.34,
+      "threshold": 0.34
+    },
+    "p_therm_train": {
+      "count": 2,
+      "fraction": 0.34,
+      "threshold": 61.3
+    },
+    "n_therm_train": {
+      "count": 2,
+      "fraction": 0.34,
+      "threshold": 49.8
+    },
+    "n_sol_test": {
+      "count": 2,
+      "requested_size": 2,
+      "effective_fraction": 1.0,
+      "threshold": 0.91
+    },
+    "n_therm_test": {
+      "count": 2,
+      "requested_size": 2,
+      "effective_fraction": 1.0,
+      "threshold": 74.2
+    }
+  },
+  "files": {
+    "lysozyme_pool_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/lysozyme_pool.csv",
+    "lysozyme_scored_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/lysozyme_scored.csv",
+    "lysozyme_train_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/lysozyme_train.csv",
+    "lysozyme_test_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/lysozyme_test.csv",
+    "p_sol_train_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/P_sol_train.csv",
+    "n_sol_train_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/N_sol_train.csv",
+    "p_therm_train_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/P_therm_train.csv",
+    "n_therm_train_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/N_therm_train.csv",
+    "n_sol_test_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/N_sol_test.csv",
+    "n_therm_test_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/N_therm_test.csv",
+    "manifest_json": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/preprocess_manifest.json",
+    "reference_generation_pool_csv": "/Users/chloe/Desktop/project/protein/Steering-PLMs/data/lysozyme_smoke/output/reference_generation_pool.csv"
+  },
+  "reference_pool": {
+    "source": "test",
+    "requested_size": 2,
+    "actual_size": 2,
+    "shuffle": true
+  }
+}

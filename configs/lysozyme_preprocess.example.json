@@ -1,0 +1,44 @@
+{
+  "input": {
+    "path": "data/lysozyme/lysozyme_family_input.csv",
+    "format": "csv",
+    "id_col": "seq_id",
+    "sequence_col": "sequence",
+    "description_col": "description",
+    "source_db_col": "source_db",
+    "family_tag_col": "family_tag"
+  },
+  "output_dir": "data/lysozyme/preprocessed",
+  "family": {
+    "seq_id_prefix": "lysozyme",
+    "source_db": "UniProt",
+    "family_tag": "lysozyme",
+    "min_length": 50,
+    "max_length": 1022,
+    "deduplicate_by_sequence": true,
+    "drop_non_canonical": true
+  },
+  "scoring": {
+    "enabled": true,
+    "device": "cuda",
+    "batch_size": 8,
+    "esm_model": "650M",
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt"
+  },
+  "split": {
+    "train_fraction": 0.8,
+    "seed": 42
+  },
+  "selection": {
+    "positive_fraction": 0.2,
+    "negative_fraction": 0.2,
+    "test_target_size": 100
+  },
+  "reference_pool": {
+    "enabled": true,
+    "source": "test",
+    "size": 100,
+    "shuffle": true
+  }
+}
