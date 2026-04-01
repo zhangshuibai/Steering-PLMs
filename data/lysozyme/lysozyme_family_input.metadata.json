@@ -1,0 +1,9 @@
+{
+  "query": "(reviewed:true) AND (protein_name:lysozyme) AND (fragment:false) AND (length:[80 TO 250]) NOT (protein_name:\"lysozyme-like\") NOT (protein_name:\"alpha-lactalbumin\") NOT (protein_name:inhibitor) NOT (protein_name:endolysin)",
+  "row_count": 144,
+  "uniprot_release": "2026_01",
+  "uniprot_release_date": "28-January-2026",
+  "api_deployment_date": "12-March-2026",
+  "x_total_results": "144",
+  "source_url": "https://rest.uniprot.org/uniprotkb/search"
+}

@@ -1,0 +1,41 @@
+{
+  "input": {
+    "path": "data/lysozyme_smoke/mock_family_scored.csv",
+    "format": "csv",
+    "id_col": "seq_id",
+    "sequence_col": "sequence",
+    "description_col": "description",
+    "source_db_col": "source_db",
+    "family_tag_col": "family_tag",
+    "sol_prob_col": "sol_prob",
+    "therm_score_col": "therm_score"
+  },
+  "output_dir": "data/lysozyme_smoke/output",
+  "family": {
+    "seq_id_prefix": "lysozyme",
+    "source_db": "MockDB",
+    "family_tag": "lysozyme",
+    "min_length": 5,
+    "max_length": 1022,
+    "deduplicate_by_sequence": true,
+    "drop_non_canonical": true
+  },
+  "scoring": {
+    "enabled": false
+  },
+  "split": {
+    "train_fraction": 0.67,
+    "seed": 42
+  },
+  "selection": {
+    "positive_fraction": 0.34,
+    "negative_fraction": 0.34,
+    "test_target_size": 2
+  },
+  "reference_pool": {
+    "enabled": true,
+    "source": "test",
+    "size": 2,
+    "shuffle": true
+  }
+}

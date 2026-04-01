@@ -1,0 +1,3 @@
+seq_id,sequence,length,description,source_db,family_tag,sol_prob,therm_score,sol_logit
+lz_005,MNTTLVILGFATANADQATQ,20,epsilon,MockDB,lysozyme,0.18,41.7,-1.5163474893680886
+lz_004,MNTTLVVLGFATANADQKTQ,20,delta,MockDB,lysozyme,0.34,49.8,-0.663294217410264
