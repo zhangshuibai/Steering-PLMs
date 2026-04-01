@@ -204,6 +204,28 @@ If the selected backend is unavailable, the run does not fail. Instead, the summ
 - `plddt_status: "unavailable: ..."`
 - `plddt_backend: "esmfold"` or `"colabfold"`
 
+How to interpret the saved fields:
+
+- `mean_plddt` is the average predicted LDDT for the edited sequence structure.
+- `source_mean_plddt` is the same quantity for the unedited input sequence.
+- `delta_mean_plddt = mean_plddt - source_mean_plddt`.
+- for the ColabFold backend in this repo, `mean_plddt` is parsed from the selected prediction PDB and averaged over `CA` atoms when available, falling back to all atom B-factors otherwise
+- the cache stores one folded result per exact amino-acid sequence, so repeated sequences across runs are reused
+
+Rough rule of thumb for AlphaFold/ColabFold pLDDT:
+
+- `> 90`: very high local confidence
+- `70-90`: generally confident backbone
+- `50-70`: low confidence
+- `< 50`: often unreliable or disordered
+
+Important caveats:
+
+- pLDDT is a model confidence score, not a direct measure of experimental stability, folding free energy, or solubility
+- a better target-property score can still come with a much worse pLDDT
+- when edit distance is very large, a sharp pLDDT drop usually means the model no longer has a confident structural hypothesis for the edited sequence
+- pLDDT is currently computed for the final edited sequences written to `per_sequence_results.csv`; it is not part of the per-round trajectory block
+
 ## Example commands
 
 Solubility steering on a controlled family test set:
