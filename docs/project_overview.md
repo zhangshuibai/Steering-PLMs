@@ -2,7 +2,7 @@
 
 ## 1. Motivation
 
-Protein language models (PLMs) such as ESM2 have learned rich representations of protein sequences from billions of natural proteins. These representations implicitly encode functional properties — solubility, thermostability, binding affinity — as directions in high-dimensional activation space. However, standard generation from PLMs produces sequences that follow the natural distribution without any property-specific bias.
+Protein language models (PLMs) such as [ESM-2](https://arxiv.org/abs/2207.08887) (Lin et al., 2023) have learned rich representations of protein sequences from billions of natural proteins. These representations implicitly encode functional properties — solubility, thermostability, binding affinity — as directions in high-dimensional activation space. However, standard generation from PLMs produces sequences that follow the natural distribution without any property-specific bias.
 
 **The core question**: Can we guide (steer) PLMs to generate protein sequences with desired properties, without retraining or fine-tuning the model?
 
@@ -11,7 +11,7 @@ This is particularly valuable because:
 - Steering vectors offer a lightweight, modular alternative: compute once, apply at inference
 - The approach is property-agnostic — the same framework works for solubility, thermostability, or any property with labeled data
 
-This project reproduces and extends the ICML'25 paper *"Steering Protein Language Models"* (Huang et al., 2025), with additional evaluations using ESMFold structural quality metrics and systematic analysis of the Generative Latent Prior (GLP) on-manifold projection.
+This project reproduces and extends the ICML'25 paper [*"Steering Protein Language Models"*](https://arxiv.org/abs/2509.07983) (Huang et al., 2025), with additional evaluations using ESMFold structural quality metrics and systematic analysis of the Generative Latent Prior (GLP) on-manifold projection.
 
 ## 2. Method
 
@@ -63,9 +63,9 @@ This is a key finding: the property information is concentrated in the middle la
 
 ### 2.5 GLP On-Manifold Projection
 
-The Generative Latent Prior (GLP, Luo et al., 2026) is a flow matching generative model trained on ESM2 Layer 17 activations from ~4 million UniRef50 natural proteins. It learns the manifold of "natural protein activations" at Layer 17.
+The [Generative Latent Prior](https://arxiv.org/abs/2602.06964) (GLP; Luo et al., 2026) is a [flow matching](https://arxiv.org/abs/2210.02747) (Lipman et al., 2023) generative model trained on ESM2 Layer 17 activations from ~4 million UniRef50 natural proteins. It learns the manifold of "natural protein activations" at Layer 17.
 
-After steering pushes activations off this manifold, GLP attempts to project them back via SDEdit:
+After steering pushes activations off this manifold, GLP attempts to project them back via [SDEdit](https://arxiv.org/abs/2108.01073) (Meng et al., 2022):
 
 1. **Normalize**: Standardize activations to zero mean, unit variance (using statistics from UniRef50)
 2. **Add noise**: Interpolate between the steered activation and random noise at level `u`
@@ -87,10 +87,10 @@ The GLP denoiser is a 334M-parameter Transformer-MLP network that processes each
 
 | Model | Parameters | Layers | Hidden Dim | Use |
 |-------|-----------|--------|------------|-----|
-| ESM2-650M | 650M | 33 | 1280 | Primary steering model |
-| ESM2-3B | 3B | 36 | 2560 | pPPL evaluation only |
-| ESMFold | 3.5B | — | — | Structural quality evaluation |
-| GLP Denoiser | 334M | 6 | 2560 | On-manifold projection |
+| [ESM2-650M](https://www.science.org/doi/10.1126/science.ade2574) | 650M | 33 | 1280 | Primary steering model |
+| [ESM2-3B](https://www.science.org/doi/10.1126/science.ade2574) | 3B | 36 | 2560 | pPPL evaluation only |
+| [ESMFold](https://www.science.org/doi/10.1126/science.ade2574) | 3.5B | — | — | Structural quality evaluation |
+| [GLP Denoiser](https://arxiv.org/abs/2602.06964) | 334M | 6 | 2560 | On-manifold projection |
 
 ### 3.2 Datasets
 
@@ -102,9 +102,9 @@ The GLP denoiser is a 334M-parameter Transformer-MLP network that processes each
 | therm_filtered | 2,000 | Melting temperature (°C) | Steering vector extraction |
 | therm_easy | 342 | Tm 50–65°C | Generation reference |
 | therm_hard | 248 | Tm < 50°C | Generation reference |
-| UniRef50 (1000) | 1,000 | — | Natural protein baseline for ESMFold |
-| DeepSol | 71,421 | Binary solubility | Oracle predictor training |
-| Meltome | 24,472 | Tm (°C) | Oracle predictor training |
+| [UniRef50](https://academic.oup.com/bioinformatics/article/23/10/1282/197795) (1000) | 1,000 | — | Natural protein baseline for ESMFold |
+| [DeepSol](https://academic.oup.com/bioinformatics/article/34/15/2605/4938490) | 71,421 | Binary solubility | Oracle predictor training |
+| [Meltome](https://www.nature.com/articles/s41592-020-0801-4) | 24,472 | Tm (°C) | Oracle predictor training |
 
 ### 3.3 Evaluation Metrics
 
@@ -236,3 +236,45 @@ L17 steering for thermostability achieves +6.1°C Tm improvement while maintaini
 - **Cross-Token Denoising**: Replace MLP denoiser with a Transformer that captures sequence-level context
 - **Single-Round High Mask**: Generate in a single round with mask_ratio=0.5–0.8 to avoid error accumulation while still modifying enough positions for property change
 - **Multi-Property Steering**: Combine steering vectors for different properties (e.g., solubility + thermostability) via linear combination or alternating application
+
+## 7. References
+
+1. **Steering Protein Language Models**
+   Huang, Long-Kai et al. (ICML 2025)
+   [arXiv:2509.07983](https://arxiv.org/abs/2509.07983)
+
+2. **Learning a Generative Meta-Model of LLM Activations** (GLP)
+   Luo, Grace et al. (2026)
+   [arXiv:2602.06964](https://arxiv.org/abs/2602.06964)
+
+3. **Evolutionary-scale prediction of atomic-level protein structure with a language model** (ESM-2 & ESMFold)
+   Lin, Zeming et al. (Science, 2023)
+   [DOI:10.1126/science.ade2574](https://www.science.org/doi/10.1126/science.ade2574)
+
+4. **Simulating 500 million years of evolution with a language model** (ESM3)
+   Hayes, Thomas et al. (Science, 2025)
+   [DOI:10.1126/science.ads0018](https://www.science.org/doi/10.1126/science.ads0018)
+
+5. **ProLLaMA: A Protein Large Language Model for Multi-Task Protein Language Processing**
+   Lv, Liuzhenghao et al. (2024)
+   [arXiv:2402.16445](https://arxiv.org/abs/2402.16445)
+
+6. **SDEdit: Guided Image Synthesis and Editing with Stochastic Differential Equations**
+   Meng, Chenlin et al. (ICLR 2022)
+   [arXiv:2108.01073](https://arxiv.org/abs/2108.01073)
+
+7. **Flow Matching for Generative Modeling**
+   Lipman, Yaron et al. (ICLR 2023)
+   [arXiv:2210.02747](https://arxiv.org/abs/2210.02747)
+
+8. **DeepSol: a deep learning framework for sequence-based protein solubility prediction**
+   Khurana, Sameer et al. (Bioinformatics, 2018)
+   [DOI:10.1093/bioinformatics/bty166](https://academic.oup.com/bioinformatics/article/34/15/2605/4938490)
+
+9. **Meltome atlas — thermal proteome stability across the tree of life**
+   Jarzab, Anna et al. (Nature Methods, 2020)
+   [DOI:10.1038/s41592-020-0801-4](https://www.nature.com/articles/s41592-020-0801-4)
+
+10. **UniRef: comprehensive and non-redundant UniProt reference clusters**
+    Suzek, Baris E. et al. (Bioinformatics, 2007)
+    [DOI:10.1093/bioinformatics/btm098](https://academic.oup.com/bioinformatics/article/23/10/1282/197795)
