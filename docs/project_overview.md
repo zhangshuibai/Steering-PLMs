@@ -63,6 +63,10 @@ This is a key finding: the property information is concentrated in the middle la
 
 ### 2.5 GLP On-Manifold Projection
 
+**Why GLP?** Steering vectors improve target properties, but they also push the model's internal activations away from the distribution of natural proteins. The activations at Layer 17, which originally lie on a low-dimensional manifold corresponding to real protein representations, are shifted to regions that do not correspond to any natural protein. This "off-manifold" displacement propagates through subsequent layers and degrades the output — producing sequences that may score well on a property predictor but have poor naturalness (high pPPL) and cannot fold into stable structures (low pLDDT).
+
+The idea behind GLP is to fix this: after steering, project the activations back onto the natural protein manifold, preserving the property improvement while restoring sequence naturalness. If successful, this would break the property-vs-naturalness trade-off.
+
 The [Generative Latent Prior](https://arxiv.org/abs/2602.06964) (GLP; Luo et al., 2026) is a [flow matching](https://arxiv.org/abs/2210.02747) (Lipman et al., 2023) generative model trained on ESM2 Layer 17 activations from ~4 million UniRef50 natural proteins. It learns the manifold of "natural protein activations" at Layer 17.
 
 After steering pushes activations off this manifold, GLP attempts to project them back via [SDEdit](https://arxiv.org/abs/2108.01073) (Meng et al., 2022):
