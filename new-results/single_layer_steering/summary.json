@@ -1,0 +1,208 @@
+{
+  "experiment": "single_layer_steering",
+  "model": "ESM2-650M",
+  "n_gen": 100,
+  "ref_data": "data/sol_easy.csv",
+  "ref_mean_prob": 0.1986611932516098,
+  "ref_sol_ratio": 0.17901234567901234,
+  "results": [
+    {
+      "layer": 0,
+      "sol_mean_prob": 0.2763226330280304,
+      "sol_ratio": 0.23,
+      "n_seqs": 100
+    },
+    {
+      "layer": 1,
+      "sol_mean_prob": 0.3119058907032013,
+      "sol_ratio": 0.28,
+      "n_seqs": 100
+    },
+    {
+      "layer": 2,
+      "sol_mean_prob": 0.27831175923347473,
+      "sol_ratio": 0.22,
+      "n_seqs": 100
+    },
+    {
+      "layer": 3,
+      "sol_mean_prob": 0.32632312178611755,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 4,
+      "sol_mean_prob": 0.28404900431632996,
+      "sol_ratio": 0.24,
+      "n_seqs": 100
+    },
+    {
+      "layer": 5,
+      "sol_mean_prob": 0.24515260756015778,
+      "sol_ratio": 0.19,
+      "n_seqs": 100
+    },
+    {
+      "layer": 6,
+      "sol_mean_prob": 0.30224427580833435,
+      "sol_ratio": 0.26,
+      "n_seqs": 100
+    },
+    {
+      "layer": 7,
+      "sol_mean_prob": 0.2957161068916321,
+      "sol_ratio": 0.29,
+      "n_seqs": 100
+    },
+    {
+      "layer": 8,
+      "sol_mean_prob": 0.2859356105327606,
+      "sol_ratio": 0.25,
+      "n_seqs": 100
+    },
+    {
+      "layer": 9,
+      "sol_mean_prob": 0.28557124733924866,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 10,
+      "sol_mean_prob": 0.2935570776462555,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 11,
+      "sol_mean_prob": 0.24248690903186798,
+      "sol_ratio": 0.21,
+      "n_seqs": 100
+    },
+    {
+      "layer": 12,
+      "sol_mean_prob": 0.3358229696750641,
+      "sol_ratio": 0.29,
+      "n_seqs": 100
+    },
+    {
+      "layer": 13,
+      "sol_mean_prob": 0.27559950947761536,
+      "sol_ratio": 0.24,
+      "n_seqs": 100
+    },
+    {
+      "layer": 14,
+      "sol_mean_prob": 0.26538121700286865,
+      "sol_ratio": 0.2,
+      "n_seqs": 100
+    },
+    {
+      "layer": 15,
+      "sol_mean_prob": 0.28527525067329407,
+      "sol_ratio": 0.24,
+      "n_seqs": 100
+    },
+    {
+      "layer": 16,
+      "sol_mean_prob": 0.2780665457248688,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 17,
+      "sol_mean_prob": 0.2803209722042084,
+      "sol_ratio": 0.22,
+      "n_seqs": 100
+    },
+    {
+      "layer": 18,
+      "sol_mean_prob": 0.3328372836112976,
+      "sol_ratio": 0.33,
+      "n_seqs": 100
+    },
+    {
+      "layer": 19,
+      "sol_mean_prob": 0.27704450488090515,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 20,
+      "sol_mean_prob": 0.30798161029815674,
+      "sol_ratio": 0.27,
+      "n_seqs": 100
+    },
+    {
+      "layer": 21,
+      "sol_mean_prob": 0.3612165153026581,
+      "sol_ratio": 0.33,
+      "n_seqs": 100
+    },
+    {
+      "layer": 22,
+      "sol_mean_prob": 0.2795090079307556,
+      "sol_ratio": 0.26,
+      "n_seqs": 100
+    },
+    {
+      "layer": 23,
+      "sol_mean_prob": 0.3025915026664734,
+      "sol_ratio": 0.29,
+      "n_seqs": 100
+    },
+    {
+      "layer": 24,
+      "sol_mean_prob": 0.32475870847702026,
+      "sol_ratio": 0.29,
+      "n_seqs": 100
+    },
+    {
+      "layer": 25,
+      "sol_mean_prob": 0.25560513138771057,
+      "sol_ratio": 0.23,
+      "n_seqs": 100
+    },
+    {
+      "layer": 26,
+      "sol_mean_prob": 0.3104049265384674,
+      "sol_ratio": 0.32,
+      "n_seqs": 100
+    },
+    {
+      "layer": 27,
+      "sol_mean_prob": 0.28680717945098877,
+      "sol_ratio": 0.22,
+      "n_seqs": 100
+    },
+    {
+      "layer": 28,
+      "sol_mean_prob": 0.27158650755882263,
+      "sol_ratio": 0.25,
+      "n_seqs": 100
+    },
+    {
+      "layer": 29,
+      "sol_mean_prob": 0.2932298481464386,
+      "sol_ratio": 0.3,
+      "n_seqs": 100
+    },
+    {
+      "layer": 30,
+      "sol_mean_prob": 0.291329950094223,
+      "sol_ratio": 0.29,
+      "n_seqs": 100
+    },
+    {
+      "layer": 31,
+      "sol_mean_prob": 0.28899598121643066,
+      "sol_ratio": 0.28,
+      "n_seqs": 100
+    },
+    {
+      "layer": 32,
+      "sol_mean_prob": 0.2413569688796997,
+      "sol_ratio": 0.19,
+      "n_seqs": 100
+    }
+  ]
+}

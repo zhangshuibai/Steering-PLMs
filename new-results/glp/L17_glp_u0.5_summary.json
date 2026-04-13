@@ -1,0 +1,10 @@
+{
+  "method": "L17+GLP(u=0.5)",
+  "glp_path": "generative_latent_prior/runs/glp-esm2-650m-layer17-d6",
+  "u": 0.5,
+  "num_timesteps": 20,
+  "n_gen": 100,
+  "sol_mean_prob": 0.2575477957725525,
+  "sol_ratio": 0.19,
+  "csv_path": "new-results/glp/L17_glp_u0.5.csv"
+}
