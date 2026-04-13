@@ -32,7 +32,7 @@ echo "  输入: data/sol_filtered.csv (pos>=0.5, neg<=0.2)"
 echo "  输出: saved_steering_vectors/650M_sol_steering_vectors.pt"
 echo "============================================================"
 
-$PYTHON extract_esm2_steering_vec.py \
+$PYTHON scripts/extraction/extract_esm2_steering_vec.py \
     --model "650M" \
     --num_data 100 \
     --property "sol" \
@@ -48,7 +48,7 @@ echo "  Hard: 参考序列溶解度 0.001~0.10, 难度更高"
 echo "============================================================"
 
 echo "--- Step 2a: Easy set with steering ---"
-$PYTHON steering_esm2_generation.py \
+$PYTHON scripts/generation/steering_esm2_generation.py \
     --model "650M" \
     --property "sol" \
     --device "$DEVICE" \
@@ -58,7 +58,7 @@ $PYTHON steering_esm2_generation.py \
     --n $N_GEN
 
 echo "--- Step 2b: Hard set with steering ---"
-$PYTHON steering_esm2_generation.py \
+$PYTHON scripts/generation/steering_esm2_generation.py \
     --model "650M" \
     --property "sol" \
     --device "$DEVICE" \
@@ -73,7 +73,7 @@ echo "Step 3: Baseline 生成 (无 Steering 对照组)"
 echo "============================================================"
 
 echo "--- Step 3a: Easy set without steering ---"
-$PYTHON steering_esm2_generation.py \
+$PYTHON scripts/generation/steering_esm2_generation.py \
     --model "650M" \
     --property "sol" \
     --device "$DEVICE" \
@@ -82,7 +82,7 @@ $PYTHON steering_esm2_generation.py \
     --n $N_GEN
 
 echo "--- Step 3b: Hard set without steering ---"
-$PYTHON steering_esm2_generation.py \
+$PYTHON scripts/generation/steering_esm2_generation.py \
     --model "650M" \
     --property "sol" \
     --device "$DEVICE" \
@@ -100,7 +100,7 @@ echo "============================================================"
 PREDICTOR="saved_predictors/sol_predictor_final.pt"
 
 echo "--- Step 4a: 评估 Easy + Steering ---"
-$PYTHON evaluate_generated_seqs.py \
+$PYTHON evaluation/oracle/evaluate_oracle.py \
     --input_csv "results/ESM2_gen_steering_sol_easy.csv" \
     --predictor_path "$PREDICTOR" \
     --property "sol" \
@@ -109,7 +109,7 @@ $PYTHON evaluate_generated_seqs.py \
 
 echo ""
 echo "--- Step 4b: 评估 Easy + No Steering ---"
-$PYTHON evaluate_generated_seqs.py \
+$PYTHON evaluation/oracle/evaluate_oracle.py \
     --input_csv "results/ESM2_gen_no_steering_sol_easy.csv" \
     --predictor_path "$PREDICTOR" \
     --property "sol" \
@@ -118,7 +118,7 @@ $PYTHON evaluate_generated_seqs.py \
 
 echo ""
 echo "--- Step 4c: 评估 Hard + Steering ---"
-$PYTHON evaluate_generated_seqs.py \
+$PYTHON evaluation/oracle/evaluate_oracle.py \
     --input_csv "results/ESM2_gen_steering_sol_hard.csv" \
     --predictor_path "$PREDICTOR" \
     --property "sol" \
@@ -127,7 +127,7 @@ $PYTHON evaluate_generated_seqs.py \
 
 echo ""
 echo "--- Step 4d: 评估 Hard + No Steering ---"
-$PYTHON evaluate_generated_seqs.py \
+$PYTHON evaluation/oracle/evaluate_oracle.py \
     --input_csv "results/ESM2_gen_no_steering_sol_hard.csv" \
     --predictor_path "$PREDICTOR" \
     --property "sol" \

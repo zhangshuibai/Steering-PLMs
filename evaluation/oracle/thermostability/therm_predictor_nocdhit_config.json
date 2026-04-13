@@ -1,0 +1,47 @@
+{
+  "args": {
+    "data_path": "data/meltome/dataset_esm_temp.csv",
+    "save_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "features_dir": "saved_predictors/therm_features_nocdhit",
+    "gpu_ids": [
+      4,
+      5,
+      6
+    ],
+    "batch_size_extract": 8,
+    "batch_size_train": 1024,
+    "epochs": 500,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "patience": 50,
+    "head": "lm_head",
+    "test_ratio": 0.1,
+    "seed": 42,
+    "last_n_layers": 1,
+    "skip_cdhit": true,
+    "no_val": false
+  },
+  "architecture": "lm_head",
+  "embed_dim": 1280,
+  "esm_model": "esm2_t33_650M_UR50D",
+  "feature_layer": "last",
+  "loss": "MSELoss",
+  "data": {
+    "source": "Meltome Atlas (dataset_esm_temp.csv)",
+    "train_size": 19821,
+    "val_size": 2203,
+    "test_size": 2448,
+    "skip_cdhit": true,
+    "no_val": false
+  },
+  "val_metrics": {
+    "spearman_rho": 0.6880877378975391,
+    "mae": 4.295095443725586
+  },
+  "test_metrics": {
+    "spearman_rho": 0.6868384978670605,
+    "spearman_pval": 0.0,
+    "mae": 4.306722640991211,
+    "rmse": 5.710229873657227
+  }
+}

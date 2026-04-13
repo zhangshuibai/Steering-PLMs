@@ -1,14 +1,19 @@
 """Quick eval for u=1.0 across all step values."""
 import os, sys, types, json, torch, numpy as np, pandas as pd
 import torch.multiprocessing as mp
+# Ensure project root is in sys.path
+import os as _os, sys as _sys
+_PROJECT_ROOT = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
+if _PROJECT_ROOT not in _sys.path:
+    _sys.path.insert(0, _PROJECT_ROOT)
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'generative_latent_prior'))
+sys.path.insert(0, os.path.join(_PROJECT_ROOT, 'generative_latent_prior'))
 
-from steering_with_glp import (
+from scripts.generation.steering_with_glp import (
     build_glp_projection_fn, generate_with_glp, steering_forward_with_glp,
     evaluate_sol, PropertyPredictor,
 )
-from evaluate_ppl import compute_pseudo_perplexity_multi_gpu
+from evaluation.ppl.evaluate_ppl import compute_pseudo_perplexity_multi_gpu
 from generative_latent_prior.glp.denoiser import GLP
 from utils.esm2_utils import load_esm2_model
 

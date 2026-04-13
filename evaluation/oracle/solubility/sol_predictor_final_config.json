@@ -1,0 +1,37 @@
+{
+  "args": {
+    "data_dir": "data/deepsol/data",
+    "save_path": "saved_predictors/sol_predictor_final.pt",
+    "features_dir": "saved_predictors/features",
+    "gpu_ids": [
+      7
+    ],
+    "batch_size_extract": 8,
+    "batch_size_train": 1024,
+    "epochs": 200,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "patience": 20,
+    "head": "lm_head",
+    "merge_train_val": false,
+    "last_n_layers": 1
+  },
+  "architecture": "lm_head",
+  "embed_dim": 1280,
+  "esm_model": "esm2_t33_650M_UR50D",
+  "feature_layer": "last",
+  "loss": "BCEWithLogitsLoss",
+  "data": {
+    "source": "DeepSol (khurana2018deepsol)",
+    "train_size": 62478,
+    "val_size": 6942,
+    "test_size": 2001,
+    "merge_train_val": false
+  },
+  "test_metrics": {
+    "accuracy": 0.6506746626686657,
+    "precision": 0.6685330347144457,
+    "recall": 0.597,
+    "f1": 0.6307448494453248
+  }
+}
