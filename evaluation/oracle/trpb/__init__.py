@@ -1,0 +1,1 @@
+"""TrpB fitness oracle assets."""

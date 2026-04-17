@@ -1,0 +1,57 @@
+{
+  "args": {
+    "dataset_name": "creilov",
+    "processed_csv": "data/benchmarks/processed/creilov/creilov_processed.csv",
+    "save_path": "evaluation/oracle/creilov/creilov_predictor_final.pt",
+    "features_dir": "saved_predictors/creilov_features",
+    "model_size": "650M",
+    "gpu_ids": [
+      0
+    ],
+    "batch_size_extract": 8,
+    "batch_size_train": 256,
+    "epochs": 200,
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "patience": 20,
+    "head": "lm_head",
+    "last_n_layers": 1,
+    "target_transform": "zscore",
+    "top_k_fraction": 0.05
+  },
+  "dataset_name": "creilov",
+  "architecture": "lm_head",
+  "embed_dim": 1280,
+  "esm_model": "650M",
+  "feature_layer": "last",
+  "target_transform": {
+    "name": "zscore",
+    "mean": 3.769571304321289,
+    "std": 0.24012169241905212
+  },
+  "loss": "MSELoss",
+  "data": {
+    "processed_csv": "data/benchmarks/processed/creilov/creilov_processed.csv",
+    "train_size": 132210,
+    "val_size": 16749,
+    "test_size": 16469
+  },
+  "val_metrics": {
+    "mae": 0.03681906312704086,
+    "rmse": 0.04844988233977165,
+    "r2": 0.9598565847999369,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 14.095754467108298,
+    "pearson_r": 0.9810110330581665,
+    "spearman_rho": 0.9782114028930664
+  },
+  "test_metrics": {
+    "mae": 0.037129126489162445,
+    "rmse": 0.04889039598824619,
+    "r2": 0.9586940371512844,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 14.116784687529456,
+    "pearson_r": 0.9806078672409058,
+    "spearman_rho": 0.9770819544792175
+  }
+}

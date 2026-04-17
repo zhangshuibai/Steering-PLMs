@@ -1,9 +1,18 @@
 __pycache__/
 *.pyc
+.codex
+.codex/
 
 # Large cached features (can be regenerated)
 saved_predictors/features/
 saved_predictors/therm_features_nocdhit/
+saved_predictors/creilov_features/
+saved_predictors/gfp_sarkisyan_features/
+saved_predictors/trpb_features/
+
+# Large benchmark artifacts (can be regenerated or re-downloaded)
+data/benchmarks/raw/
+data/benchmarks/processed/
 
 # Large raw meltome data (can be re-downloaded)
 data/meltome/meltome_raw_all.csv

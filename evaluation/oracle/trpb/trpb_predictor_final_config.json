@@ -1,0 +1,57 @@
+{
+  "args": {
+    "dataset_name": "trpb",
+    "processed_csv": "data/benchmarks/processed/trpb/trpb_processed.csv",
+    "save_path": "evaluation/oracle/trpb/trpb_predictor_final.pt",
+    "features_dir": "saved_predictors/trpb_features",
+    "model_size": "650M",
+    "gpu_ids": [
+      0
+    ],
+    "batch_size_extract": 4,
+    "batch_size_train": 256,
+    "epochs": 200,
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "patience": 20,
+    "head": "lm_head",
+    "last_n_layers": 1,
+    "target_transform": "zscore",
+    "top_k_fraction": 0.05
+  },
+  "dataset_name": "trpb",
+  "architecture": "lm_head",
+  "embed_dim": 1280,
+  "esm_model": "650M",
+  "feature_layer": "last",
+  "target_transform": {
+    "name": "zscore",
+    "mean": 0.020324157550930977,
+    "std": 0.05844133719801903
+  },
+  "loss": "MSELoss",
+  "data": {
+    "processed_csv": "data/benchmarks/processed/trpb/trpb_processed.csv",
+    "train_size": 144717,
+    "val_size": 7182,
+    "test_size": 7230
+  },
+  "val_metrics": {
+    "mae": 0.02131844125688076,
+    "rmse": 0.03891027861777829,
+    "r2": 0.5526211520949535,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 15.461250000000001,
+    "pearson_r": 0.7507280707359314,
+    "spearman_rho": 0.3434835374355316
+  },
+  "test_metrics": {
+    "mae": 0.02510889619588852,
+    "rmse": 0.04880019581259684,
+    "r2": 0.6709619080902899,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 15.006867922224595,
+    "pearson_r": 0.8214502930641174,
+    "spearman_rho": 0.40306368470191956
+  }
+}

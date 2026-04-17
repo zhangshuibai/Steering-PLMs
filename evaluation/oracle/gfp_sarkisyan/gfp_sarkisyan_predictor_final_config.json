@@ -1,0 +1,57 @@
+{
+  "args": {
+    "dataset_name": "gfp_sarkisyan",
+    "processed_csv": "data/benchmarks/processed/gfp_sarkisyan/gfp_sarkisyan_processed.csv",
+    "save_path": "evaluation/oracle/gfp_sarkisyan/gfp_sarkisyan_predictor_final.pt",
+    "features_dir": "saved_predictors/gfp_sarkisyan_features",
+    "model_size": "650M",
+    "gpu_ids": [
+      0
+    ],
+    "batch_size_extract": 8,
+    "batch_size_train": 256,
+    "epochs": 200,
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "patience": 20,
+    "head": "lm_head",
+    "last_n_layers": 1,
+    "target_transform": "zscore",
+    "top_k_fraction": 0.05
+  },
+  "dataset_name": "gfp_sarkisyan",
+  "architecture": "lm_head",
+  "embed_dim": 1280,
+  "esm_model": "650M",
+  "feature_layer": "last",
+  "target_transform": {
+    "name": "zscore",
+    "mean": 2.6577577590942383,
+    "std": 1.059272289276123
+  },
+  "loss": "MSELoss",
+  "data": {
+    "processed_csv": "data/benchmarks/processed/gfp_sarkisyan/gfp_sarkisyan_processed.csv",
+    "train_size": 41391,
+    "val_size": 5160,
+    "test_size": 5164
+  },
+  "val_metrics": {
+    "mae": 0.5320743322372437,
+    "rmse": 0.6609655757559283,
+    "r2": 0.605397125959122,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 4.108527131782946,
+    "pearson_r": 0.8056817054748535,
+    "spearman_rho": 0.7648746967315674
+  },
+  "test_metrics": {
+    "mae": 0.5295057892799377,
+    "rmse": 0.6570195272989736,
+    "r2": 0.6156432866453576,
+    "top_k_fraction": 0.05,
+    "top_k_enrichment": 3.926059539959154,
+    "pearson_r": 0.8067609667778015,
+    "spearman_rho": 0.7701921463012695
+  }
+}

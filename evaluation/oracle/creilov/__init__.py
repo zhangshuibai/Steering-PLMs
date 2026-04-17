@@ -1,0 +1,1 @@
+"""CreiLOV fitness oracle assets."""

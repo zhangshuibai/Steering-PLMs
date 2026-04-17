@@ -1,0 +1,20 @@
+Legend & Notes for Protein Fitness Benchmark Datasets,,,
+,,,
+Label Source Tags,,,
+[WET],Pure wet-lab measurement,Green fill,Directly measured fitness from experimental assay
+[MIX],Wet lab + model inference,Yellow fill,Raw measurement processed through a thermodynamic / kinetic / statistical model
+[PROXY],Database + heuristic annotation,Orange fill,"Label comes from database tags or rule-based filtering, not direct measurement"
+,,,
+Key Concepts,,,
+Systematic DMS,,,Unbiased saturation mutagenesis; goal is to characterize the fitness landscape; near-IID sampling
+Cross-protein,,,"Each data point is a different WT protein; task is inter-protein generalization, not mutation-level prediction"
+Engineering campaign,,,Iterative DE/ML-DE rounds; sampling biased toward high-fitness region; non-IID; risks fitness overestimation when used as oracle
+Combinatorial library,,,Mutations restricted to a few pre-selected sites; all (or many) combinations tested
+SSM (Site-Saturation),,,"At each position, test all 19 alternative amino acids; produces single-mutant landscape"
+epPCR,,,Error-prone PCR; random mutagenesis across whole gene; typically 1-5 mutations per variant
+,,,
+Recommendation for oracle training (pure wet lab preferred),,,
+Strong recommend,"TrpB (Johnston), CreiLOV combinatorial, GFP Sarkisyan",,"Systematic DMS, pure wet lab label, good size"
+Conditional,ΔΔG Megascale,,"Largest but label is model-inferred, not pure wet"
+Conditional,NucB,,Pure wet lab but campaign data non-IID + bin label
+Not recommended,"Meltome, Rhomax, DeepSol, ABE",,Cross-protein / too small / proxy label / no unified release
