@@ -1,0 +1,74 @@
+{
+  "reference_no_steering": {
+    "mean_abs_z": 0.7613735198974609,
+    "frac_z_gt_3": 0.004933928605169058,
+    "mean_mahal_dist": 1219.94482421875,
+    "median_mahal_dist": 1139.9619140625,
+    "mean_log_likelihood": -1786.2137451171875,
+    "n_tokens": 5250
+  },
+  "L17_alpha1": {
+    "mean_abs_z": 0.7572103142738342,
+    "frac_z_gt_3": 0.004918749909847975,
+    "mean_mahal_dist": 1207.027587890625,
+    "median_mahal_dist": 1117.9798583984375,
+    "mean_log_likelihood": -1779.7552490234375,
+    "n_tokens": 5250
+  },
+  "L17_alpha2": {
+    "mean_abs_z": 0.7804444432258606,
+    "frac_z_gt_3": 0.005576041527092457,
+    "mean_mahal_dist": 1276.632080078125,
+    "median_mahal_dist": 1168.3616943359375,
+    "mean_log_likelihood": -1814.557373046875,
+    "n_tokens": 5250
+  },
+  "L17_alpha3": {
+    "mean_abs_z": 0.8287261724472046,
+    "frac_z_gt_3": 0.0072309523820877075,
+    "mean_mahal_dist": 1428.2716064453125,
+    "median_mahal_dist": 1304.703125,
+    "mean_log_likelihood": -1890.377197265625,
+    "n_tokens": 5250
+  },
+  "L17_alpha5": {
+    "mean_abs_z": 0.9677407145500183,
+    "frac_z_gt_3": 0.016055654734373093,
+    "mean_mahal_dist": 1915.4422607421875,
+    "median_mahal_dist": 1781.67626953125,
+    "mean_log_likelihood": -2133.96240234375,
+    "n_tokens": 5250
+  },
+  "L17_alpha10": {
+    "mean_abs_z": 1.264760136604309,
+    "frac_z_gt_3": 0.05899449437856674,
+    "mean_mahal_dist": 3230.729248046875,
+    "median_mahal_dist": 3165.333251953125,
+    "mean_log_likelihood": -2791.605712890625,
+    "n_tokens": 5250
+  },
+  "all_layer_alpha1": {
+    "mean_abs_z": 0.815636157989502,
+    "frac_z_gt_3": 0.0065836310386657715,
+    "mean_mahal_dist": 1389.5301513671875,
+    "median_mahal_dist": 1285.92333984375,
+    "mean_log_likelihood": -1871.0064697265625,
+    "n_tokens": 5250
+  },
+  "all_layer_alpha2": {
+    "mean_abs_z": 1.003039836883545,
+    "frac_z_gt_3": 0.015387053601443768,
+    "mean_mahal_dist": 2011.5975341796875,
+    "median_mahal_dist": 1958.3377685546875,
+    "mean_log_likelihood": -2182.0400390625,
+    "n_tokens": 5250
+  },
+  "all_layer_alpha3": {
+    "mean_abs_z": 1.3047088384628296,
+    "frac_z_gt_3": 0.06272053718566895,
+    "mean_mahal_dist": 3362.783935546875,
+    "median_mahal_dist": 3343.59814453125,
+    "mean_log_likelihood": -2857.633056640625,
+    "n_tokens": 5250
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "dataset": "gfp",
+  "input": "new-results/fitness_benchmarks/gfp_medium_R4T2/L17_GLP_u0.5.csv",
+  "n_seqs": 1000,
+  "oracle_mean": 1.3195064067840576,
+  "oracle_median": 1.3150300979614258,
+  "oracle_std": 0.40889665484428406
+}

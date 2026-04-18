@@ -1,0 +1,11 @@
+{
+  "method": "L16+GLP(u=1.0)",
+  "property": "sol",
+  "glp_path": "generative_latent_prior/runs/glp-esm2-650m-layer17-d6",
+  "u": 1.0,
+  "num_timesteps": 25,
+  "n_gen": 100,
+  "mean_val": 0.3325677514076233,
+  "ratio": 0.32,
+  "csv_path": "new-results/fixed_layer/sol_easy/L16_glp_u1.0.csv"
+}

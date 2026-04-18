@@ -1,0 +1,11 @@
+{
+  "method": "L16+GLP(u=0.1)",
+  "property": "therm",
+  "glp_path": "generative_latent_prior/runs/glp-esm2-650m-layer17-d6",
+  "u": 0.1,
+  "num_timesteps": 25,
+  "n_gen": 100,
+  "mean_val": -0.3865053057670593,
+  "ratio": null,
+  "csv_path": "new-results/fixed_layer/therm_easy/L16_glp_u0.1.csv"
+}

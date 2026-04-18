@@ -1,0 +1,8 @@
+{
+  "dataset": "trpb",
+  "input": "new-results/fitness_benchmarks/trpb/random.csv",
+  "n_seqs": 1000,
+  "lookup_mean": 0.021856954493111983,
+  "lookup_median": 0.0117451929858345,
+  "in_library_fraction": 0.991
+}

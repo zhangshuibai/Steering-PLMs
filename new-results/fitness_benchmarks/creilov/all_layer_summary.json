@@ -1,0 +1,8 @@
+{
+  "dataset": "creilov",
+  "input": "new-results/fitness_benchmarks/creilov/all_layer.csv",
+  "n_seqs": 1000,
+  "oracle_mean": 3.9459352493286133,
+  "oracle_median": 3.958803176879883,
+  "oracle_std": 0.12231121212244034
+}

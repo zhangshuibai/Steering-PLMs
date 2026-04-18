@@ -1,0 +1,8 @@
+{
+  "dataset": "trpb",
+  "input": "new-results/fitness_benchmarks/trpb/no_steering.csv",
+  "n_seqs": 1000,
+  "lookup_mean": 0.5020832805015436,
+  "lookup_median": 0.4835049377576567,
+  "in_library_fraction": 1.0
+}

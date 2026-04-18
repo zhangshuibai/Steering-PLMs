@@ -1,0 +1,8 @@
+{
+  "dataset": "creilov",
+  "input": "new-results/fitness_benchmarks/creilov/L17.csv",
+  "n_seqs": 1000,
+  "oracle_mean": 4.056060314178467,
+  "oracle_median": 4.055421829223633,
+  "oracle_std": 0.06322769820690155
+}

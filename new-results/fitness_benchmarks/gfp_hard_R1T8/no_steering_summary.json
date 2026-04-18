@@ -1,0 +1,8 @@
+{
+  "dataset": "gfp",
+  "input": "new-results/fitness_benchmarks/gfp_hard_R1T8/no_steering.csv",
+  "n_seqs": 1000,
+  "oracle_mean": 1.296064019203186,
+  "oracle_median": 1.308696985244751,
+  "oracle_std": 0.42577165365219116
+}

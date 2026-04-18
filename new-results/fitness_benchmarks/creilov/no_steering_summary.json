@@ -1,0 +1,8 @@
+{
+  "dataset": "creilov",
+  "input": "new-results/fitness_benchmarks/creilov/no_steering.csv",
+  "n_seqs": 1000,
+  "oracle_mean": 4.061814785003662,
+  "oracle_median": 4.060122966766357,
+  "oracle_std": 0.061135221272706985
+}
