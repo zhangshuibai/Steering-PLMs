@@ -2,6 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Code Review Workflow (MANDATORY)
+
+After writing a new batch of code or making non-trivial modifications to existing code, **always run Codex CLI with gpt-5.4 at xhigh reasoning effort** to review the changes, then consider the suggestions before proceeding.
+
+Command pattern:
+```bash
+export PATH="$HOME/.npm-global/bin:$PATH"
+codex exec -m gpt-5.4 -c model_reasoning_effort="xhigh" \
+  --sandbox read-only --skip-git-repo-check \
+  "REVIEW_PROMPT_HERE" > /tmp/codex_review/<name>.log 2>&1 &
+```
+
+Exception: If the user's Codex quota is exhausted (ChatGPT Plus account), skip the review and notify the user.
+
+The review should:
+1. Identify BLOCKER / HIGH / MEDIUM / NITPICK issues with exact file:line references
+2. Be done in background (not blocking user interaction)
+3. Result in a short summary back to the user on which suggestions were accepted and applied
+
+Do not launch long-running experiments before at least one round of Codex review for non-trivial changes.
+
 ## Project Overview
 
 Implementation of ICML'25 paper "Steering Protein Language Models" (Huang et al.). Steers protein language models (ESM2, ESM3, ProLLaMA) to generate sequences with desired properties (solubility, thermostability) using steering vectors -- directional guidance derived from high/low property sequences, applied without fine-tuning. Optionally integrates Generative Latent Prior (GLP) for on-manifold projection to maintain sequence naturalness.

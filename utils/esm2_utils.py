@@ -60,22 +60,26 @@ def load_esm2_model(model_name, device='cuda', ckpt_path=None):
     model.token_dropout = False
     return model, alphabet
 
-def extract_esm2_features(seqs, model, alphabet, n_layer, batch_size=1, device='cuda'):
+def extract_esm2_features(seqs, model, alphabet, n_layer, batch_size=8, device='cuda'):
     """
-    Extracts ESM-2 features for a list of sequences from specified model layers.
+    Extracts ESM-2 features for a list of sequences from all transformer layers.
     Args:
         seqs (list of str): Protein sequences.
         model: ESM-2 model.
         alphabet: ESM-2 alphabet object.
-        layers (list of int): Layer indices to extract representations from.
+        n_layer (int): Number of transformer layers (33 for 650M).
         batch_size (int): Number of sequences per batch.
     Returns:
-        torch.Tensor: Representations of shape (num_layers, num_seqs, feature_dim)
+        torch.Tensor: Representations of shape (n_layer, num_seqs, feature_dim).
+        Index k corresponds to the output of self.layers[k] (the (k+1)-th transformer block),
+        which is ESM2 API repr_layers[k+1].
+        This aligns with steering_forward where steering_vectors[k] is injected
+        after self.layers[k].
     """
     batch_converter = alphabet.get_batch_converter()
-    # Prepare a list for each layer to collect representations
-    layers = list(range(n_layer))
-    layer_reps = [[] for _ in layers]
+    # Use repr_layers 1..n_layer so that index k maps to self.layers[k] output
+    api_layers = list(range(1, n_layer + 1))
+    layer_reps = [[] for _ in range(n_layer)]
 
     # Process sequences in batches
     for start in range(0, len(seqs), batch_size):
@@ -85,17 +89,17 @@ def extract_esm2_features(seqs, model, alphabet, n_layer, batch_size=1, device='
         batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
 
         with torch.no_grad():
-            results = model(batch_tokens.to(device), repr_layers=layers)
+            results = model(batch_tokens.to(device), repr_layers=api_layers)
 
         # Collect mean representations for each sequence and layer
-        for layer_idx, layer in enumerate(layers):
-            token_reps = results["representations"][layer]
+        for k, api_layer in enumerate(api_layers):
+            token_reps = results["representations"][api_layer]
             for seq_idx, seq_len in enumerate(batch_lens):
                 # Exclude BOS/EOS tokens
                 rep = token_reps[seq_idx, 1:seq_len-1].mean(0).cpu()
-                layer_reps[layer_idx].append(rep)
+                layer_reps[k].append(rep)
 
-    # Stack representations: (num_layers, num_seqs, feature_dim)
+    # Stack representations: (n_layer, num_seqs, feature_dim)
     stacked = torch.stack([torch.stack(reps) for reps in layer_reps])
     return stacked
 

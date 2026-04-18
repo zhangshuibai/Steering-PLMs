@@ -103,9 +103,11 @@ def build_glp_projection_fn(glp_model, u=0.5, num_timesteps=20):
 def steering_forward_with_glp(
     self, tokens, repr_layers=[], need_head_weights=False,
     return_contacts=False, steering_vectors=None,
-    glp_project_fn=None, glp_layer=17
+    glp_project_fn=None, glp_layer=16
 ):
-    """ESM2 forward with steering at glp_layer + GLP projection."""
+    """ESM2 forward with steering at glp_layer + GLP projection.
+    glp_layer: 0-indexed into self.layers. Default 16 = self.layers[16] = ESM2 API repr_layers[17],
+    which is the layer GLP was trained on."""
     if return_contacts:
         need_head_weights = True
 
@@ -227,7 +229,10 @@ if __name__ == "__main__":
                         default='generative_latent_prior/runs/glp-esm2-650m-layer17-d6')
     parser.add_argument('--u', type=float, default=0.5)
     parser.add_argument('--num_timesteps', type=int, default=20)
-    parser.add_argument('--glp_layer', type=int, default=17)
+    parser.add_argument('--glp_layer', type=int, default=16,
+                        help='Layer index for GLP projection (0-indexed into self.layers). '
+                             'GLP was trained on ESM2 API repr_layers=[17] = self.layers[16] output, '
+                             'so default is 16 to align with GLP training data.')
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--n_gen', type=int, default=100)
     parser.add_argument('--output_dir', type=str, default='new-results/glp')
