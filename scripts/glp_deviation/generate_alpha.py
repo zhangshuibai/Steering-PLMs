@@ -54,8 +54,8 @@ from scripts.glp_deviation.steering_variants import steering_forward_all_layer_w
 # ==================== Setting parser (strict) ====================
 
 SETTING_RE = re.compile(
-    r'^(L17|allL)_a(\d+(?:\.\d+)?)'  # scope + alpha
-    r'(?:_(GLP|L17GLP)_u(\d+(?:\.\d+)?))?$'  # optional GLP + u
+    r'^(L17|L17post|allL)_a(\d+(?:\.\d+)?)'  # scope + alpha
+    r'(?:_(GLP|L17GLP)(mask)?_u(\d+(?:\.\d+)?))?$'  # optional GLP (+mask suffix) + u
 )
 
 
@@ -64,21 +64,28 @@ def parse_setting(setting):
     if not m:
         raise ValueError(
             f'Invalid setting: {setting!r}. '
-            'Expected: L17_a{a} | L17_a{a}_GLP_u{u} | allL_a{a} | allL_a{a}_L17GLP_u{u}'
+            'Expected: L17_a{a}[_GLP[mask]_u{u}] | '
+            'L17post_a{a}[_GLP[mask]_u{u}] | '
+            'allL_a{a}[_L17GLP[mask]_u{u}]'
         )
-    scope_tag, alpha_str, glp_tag, u_str = m.groups()
-    scope = 'L17' if scope_tag == 'L17' else 'all'
+    scope_tag, alpha_str, glp_tag, mask_suffix, u_str = m.groups()
+    # scope_map: 'L17' → 'L17' (single layer), 'L17post' → 'L17post' (layers 16..32),
+    #            'allL' → 'all' (every layer)
+    scope_map = {'L17': 'L17', 'L17post': 'L17post', 'allL': 'all'}
+    scope = scope_map[scope_tag]
     alpha = float(alpha_str)
     use_glp = glp_tag is not None
+    glp_mask_only = mask_suffix == 'mask'
     u = float(u_str) if u_str is not None else None
 
-    # Validate GLP tag matches scope
+    # Validate GLP tag matches scope. L17 and L17post both use _GLP[mask]_u (single-layer GLP at L17).
+    # Only allL uses _L17GLP[mask]_u to emphasize that GLP is at L17 but steering is everywhere.
     if use_glp:
-        if scope == 'L17' and glp_tag != 'GLP':
-            raise ValueError(f'L17 scope must use _GLP_u tag, got _{glp_tag}_')
+        if scope in ('L17', 'L17post') and glp_tag != 'GLP':
+            raise ValueError(f'{scope_tag} scope must use _GLP[mask]_u tag, got _{glp_tag}_')
         if scope == 'all' and glp_tag != 'L17GLP':
-            raise ValueError(f'all-layer scope must use _L17GLP_u tag, got _{glp_tag}_')
-    return scope, alpha, use_glp, u
+            raise ValueError(f'all-layer scope must use _L17GLP[mask]_u tag, got _{glp_tag}_')
+    return scope, alpha, use_glp, u, glp_mask_only
 
 
 # ==================== Steering vector construction ====================
@@ -87,6 +94,12 @@ def build_steering_vectors(diff, scope, alpha):
     if scope == 'L17':
         sv = torch.zeros_like(diff)
         sv[16] = diff[16] * alpha  # self.layers[16] = L17 = where GLP was trained
+        return sv
+    elif scope == 'L17post':
+        # Zero on layers 0..15 (L1..L16), steer at layers 16..32 (L17..L33).
+        # Purpose: test whether post-L17 steering acts as a coherence corrector after GLP.
+        sv = torch.zeros_like(diff)
+        sv[16:] = diff[16:] * alpha
         return sv
     elif scope == 'all':
         return diff * alpha
@@ -212,9 +225,21 @@ def precompute_mask_positions_nk(seq_len, n_positions, n_rounds, seed):
 
 # ==================== Generation ====================
 
-def generate_one(ref_seq, model, alphabet, device, sv, use_glp, glp_fn, scope_is_all,
+def generate_one(ref_seq, model, alphabet, device, sv, use_glp, glp_fn,
+                 needs_multilayer_forward,
                  mask_positions_per_round, sample_generator,
+                 glp_mask_only=False,
                  temperature=1.0, top_p=0.9):
+    """needs_multilayer_forward: True when steering vectors are non-zero at layers
+    beyond L17 (scope ∈ {'all', 'L17post'}). Selects the multilayer-steering GLP
+    forward path. For pure L17 single-layer steering (zero everywhere else), use
+    the single-layer path which only touches L17.
+
+    glp_mask_only: if True, the GLP projection is only applied at the residue
+    positions masked in the CURRENT round (the ones being re-predicted).
+    Unmasked positions keep their ESM2-computed L17 intact, which preserves
+    inter-position coherence for the 90% of residues that aren't being
+    regenerated. Only meaningful when use_glp=True."""
     bc = alphabet.get_batch_converter()
     mask_idx = alphabet.mask_idx
     _, _, tokens = bc([('protein', ref_seq)])
@@ -228,18 +253,46 @@ def generate_one(ref_seq, model, alphabet, device, sv, use_glp, glp_fn, scope_is
         seq_token = tokens.clone()
         seq_token[0, token_positions] = mask_idx
 
+        # For mask-only GLP, wrap glp_fn so it only projects the residues
+        # currently being masked and re-predicted. Since GLP is per-position
+        # independent (MLP denoiser, no inter-position attention), we build a
+        # minimal [BOS, mask_pos_1, ..., mask_pos_k, EOS] tensor and only
+        # GLP-project that — mathematically equivalent to running GLP on the
+        # full sequence and discarding non-mask rows, but ~10x faster.
+        round_glp_fn = glp_fn
+        if use_glp and glp_mask_only and glp_fn is not None:
+            _mask_tok_pos = token_positions  # (n_mask,) tensor on device
+            def _mask_only_project(acts, _base_fn=glp_fn, _mp=_mask_tok_pos):
+                # acts: (T, B, D). Build a minimal tensor with just BOS + mask
+                # residues + EOS, project that, then write back into result.
+                bos = acts[:1]                               # (1, B, D)
+                eos = acts[-1:]                              # (1, B, D)
+                masked_slice = acts[_mp]                     # (n_mask, B, D)
+                mini = torch.cat([bos, masked_slice, eos], dim=0)  # (n_mask+2, B, D)
+                mini_projected = _base_fn(mini)              # BOS/EOS unchanged,
+                                                             #   interior projected
+                projected_masked = mini_projected[1:-1]      # (n_mask, B, D)
+                result = acts.clone()
+                result[_mp] = projected_masked
+                return result
+            round_glp_fn = _mask_only_project
+
         with torch.no_grad():
-            if use_glp and scope_is_all:
+            if use_glp and needs_multilayer_forward:
+                # Steer at every layer where sv is non-zero, GLP at L17
                 out = model.steering_forward_all_l17glp(
                     tokens=seq_token, steering_vectors=sv,
-                    glp_project_fn=glp_fn, glp_layer=16,
+                    glp_project_fn=round_glp_fn, glp_layer=16,
                 )
             elif use_glp:
+                # Steer + GLP only at L17 (pure single-layer)
                 out = model.steering_forward_glp(
                     tokens=seq_token, steering_vectors=sv,
-                    glp_project_fn=glp_fn, glp_layer=16,
+                    glp_project_fn=round_glp_fn, glp_layer=16,
                 )
             elif sv is not None:
+                # No GLP: steering_forward iterates all layers and applies sv
+                # wherever it's non-zero (zeros are no-ops after rescale)
                 out = model.steering_forward(tokens=seq_token, steering_vectors=sv)
             else:
                 out = model(tokens=seq_token)
@@ -287,8 +340,9 @@ def main():
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
-    scope, alpha, use_glp, u = parse_setting(args.setting)
-    print(f'Setting: {args.setting} → scope={scope}, alpha={alpha}, GLP={use_glp}, u={u}')
+    scope, alpha, use_glp, u, glp_mask_only = parse_setting(args.setting)
+    print(f'Setting: {args.setting} → scope={scope}, alpha={alpha}, GLP={use_glp}, u={u}, '
+          f'mask_only={glp_mask_only}')
 
     model, alphabet = load_esm2_model('650M', device=args.device)
     model.steering_forward = types.MethodType(steering_forward, model)
@@ -364,7 +418,9 @@ def main():
 
         new_seq = generate_one(
             ref_seq, model, alphabet, args.device, sv,
-            use_glp=use_glp, glp_fn=glp_fn, scope_is_all=(scope == 'all'),
+            use_glp=use_glp, glp_fn=glp_fn,
+            needs_multilayer_forward=(scope in ('all', 'L17post')),
+            glp_mask_only=glp_mask_only,
             mask_positions_per_round=mask_positions_per_round,
             sample_generator=sample_gen,
         )
