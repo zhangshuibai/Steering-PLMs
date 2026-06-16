@@ -1,0 +1,118 @@
+{
+  "args": {
+    "property": "therm",
+    "input_csv": "data/lysozyme/preprocessed/N_therm_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_lysozyme_therm_random_v3",
+    "input_score_col": "therm_score",
+    "family_score_col": "therm_score",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": null,
+    "mask_ratio": 0.1,
+    "mask_strategy": "random",
+    "num_rounds": 10,
+    "modes": [
+      "no_steering",
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": false,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 57.1619412,
+    "neg_threshold": 47.8440862,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "no_steering": {
+      "summary": {
+        "therm_mean": 46.00907516479492,
+        "source_therm_mean": 46.51033020019531,
+        "delta_therm_mean": -0.5012524724006653,
+        "delta_therm_median": -1.1127490997314453,
+        "success_rate": 0.3333333333333333,
+        "edit_success_rate": 0.3333333333333333,
+        "hamming_mean": 101.16666666666667,
+        "percent_identity_mean": 0.40806041472724425,
+        "fitness_gain_per_mutation_mean": -0.011011944166282712,
+        "top_1_therm_mean": 49.08122253417969,
+        "top_5_therm_mean": 46.716529846191406,
+        "top_10_therm_mean": 46.00907516479492,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.3333333333333333
+      },
+      "csv_path": "results/mvp_lysozyme_therm_random_v3/no_steering/per_sequence_results.csv"
+    },
+    "naive_steering": {
+      "summary": {
+        "therm_mean": 48.44552993774414,
+        "source_therm_mean": 46.51033020019531,
+        "delta_therm_mean": 1.9352073669433594,
+        "delta_therm_median": 0.5704822540283203,
+        "success_rate": 0.5,
+        "edit_success_rate": 0.5,
+        "hamming_mean": 111.33333333333333,
+        "percent_identity_mean": 0.3491596459413063,
+        "fitness_gain_per_mutation_mean": 0.014856818457841536,
+        "top_1_therm_mean": 51.611053466796875,
+        "top_5_therm_mean": 48.97475051879883,
+        "top_10_therm_mean": 48.44552993774414,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.3333333333333333
+      },
+      "csv_path": "results/mvp_lysozyme_therm_random_v3/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "therm_mean": 46.42051315307617,
+        "source_therm_mean": 46.51033020019531,
+        "delta_therm_mean": -0.08981132507324219,
+        "delta_therm_median": -0.017976760864257812,
+        "success_rate": 0.5,
+        "edit_success_rate": 0.5,
+        "hamming_mean": 118.16666666666667,
+        "percent_identity_mean": 0.31078653822291824,
+        "fitness_gain_per_mutation_mean": -0.0062053393210546185,
+        "top_1_therm_mean": 50.327842712402344,
+        "top_5_therm_mean": 47.23935317993164,
+        "top_10_therm_mean": 46.42051315307617,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_lysozyme_therm_random_v3/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "aspo_masking": "ASPO-style approximation using token-relatedness scores at selected ESM2 layers and editing the lowest-score sites.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+seq_id,sequence,length,description,source_db,family_tag,sol_prob,therm_score,sol_logit
+lz_002,MKALIVVLAFATANADAQTQ,20,beta,MockDB,lysozyme,0.82,68.5,1.5163474893680882
+lz_003,MKTTLVVLAFATANADEKTQ,20,gamma,MockDB,lysozyme,0.63,61.3,0.5322168137473082

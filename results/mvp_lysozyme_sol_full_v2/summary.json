@@ -1,0 +1,118 @@
+{
+  "args": {
+    "property": "sol",
+    "input_csv": "data/lysozyme/preprocessed/N_sol_test.csv",
+    "family_csv": "data/lysozyme/preprocessed/lysozyme_train.csv",
+    "output_dir": "results/mvp_lysozyme_sol_full_v2",
+    "input_score_col": "sol_prob",
+    "family_score_col": "sol_prob",
+    "sequence_col": "sequence",
+    "model": "650M",
+    "device": "mps",
+    "n": null,
+    "mask_ratio": 0.1,
+    "mask_strategy": "random",
+    "modes": [
+      "no_steering",
+      "naive_steering",
+      "alignment_steering"
+    ],
+    "top_quantile": 0.2,
+    "bottom_quantile": 0.2,
+    "alpha": 1.0,
+    "temperature": 1.0,
+    "top_p": 0.9,
+    "target_layers": [
+      17,
+      18
+    ],
+    "avoid_original_token": true,
+    "allow_original_token_in_random_baseline": true,
+    "seed": 42,
+    "sol_predictor_path": "saved_predictors/sol_predictor_final.pt",
+    "therm_predictor_path": "saved_predictors/therm_predictor_nocdhit.pt",
+    "skip_ppl": true,
+    "ppl_model": "3B",
+    "ppl_gpu_ids": [
+      0
+    ],
+    "ppl_batch_masks": 32,
+    "diversity_pairs": 2048
+  },
+  "steering_meta": {
+    "pos_threshold": 0.992132604,
+    "neg_threshold": 0.419965436,
+    "n_pos": 22,
+    "n_neg": 22
+  },
+  "results": {
+    "no_steering": {
+      "summary": {
+        "sol_mean": 0.6446482539176941,
+        "source_sol_mean": 0.2643621265888214,
+        "delta_sol_mean": 0.38028621673583984,
+        "delta_sol_median": 0.38912349939346313,
+        "success_rate": 1.0,
+        "edit_success_rate": 1.0,
+        "hamming_mean": 91.83333333333333,
+        "percent_identity_mean": 0.44364017501238323,
+        "fitness_gain_per_mutation_mean": 0.004831043142570429,
+        "top_1_sol_mean": 0.9722864031791687,
+        "top_5_sol_mean": 0.7536750435829163,
+        "top_10_sol_mean": 0.6446482539176941,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.8333333333333334
+      },
+      "csv_path": "results/mvp_lysozyme_sol_full_v2/no_steering/per_sequence_results.csv"
+    },
+    "naive_steering": {
+      "summary": {
+        "sol_mean": 0.17651136219501495,
+        "source_sol_mean": 0.2643621265888214,
+        "delta_sol_mean": -0.08785074204206467,
+        "delta_sol_median": -0.15513208508491516,
+        "success_rate": 0.3333333333333333,
+        "edit_success_rate": 0.3333333333333333,
+        "hamming_mean": 159.83333333333334,
+        "percent_identity_mean": 0.0,
+        "fitness_gain_per_mutation_mean": -0.0005618415494003873,
+        "top_1_sol_mean": 0.3645819425582886,
+        "top_5_sol_mean": 0.21029558777809143,
+        "top_10_sol_mean": 0.17651136219501495,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_lysozyme_sol_full_v2/naive_steering/per_sequence_results.csv"
+    },
+    "alignment_steering": {
+      "summary": {
+        "sol_mean": 0.08760768920183182,
+        "source_sol_mean": 0.2643621265888214,
+        "delta_sol_mean": -0.1767544150352478,
+        "delta_sol_median": -0.14506006240844727,
+        "success_rate": 0.16666666666666666,
+        "edit_success_rate": 0.16666666666666666,
+        "hamming_mean": 159.83333333333334,
+        "percent_identity_mean": 0.0,
+        "fitness_gain_per_mutation_mean": -0.0011744969996220498,
+        "top_1_sol_mean": 0.22663353383541107,
+        "top_5_sol_mean": 0.10380405187606812,
+        "top_10_sol_mean": 0.08760768920183182,
+        "unique_fraction": 1.0,
+        "pairwise_hamming_mean": 0.0,
+        "sol_threshold_cross_rate": 0.0
+      },
+      "csv_path": "results/mvp_lysozyme_sol_full_v2/alignment_steering/per_sequence_results.csv"
+    }
+  },
+  "notes": {
+    "alignment_steering": "MVP uses identity projector hook; replace with diffusion prior later.",
+    "targeted_masking": "ASPO-style approximation using cosine ranking at selected ESM2 layers.",
+    "optional_metrics_not_in_mvp": [
+      "pLDDT",
+      "nearest_neighbor_identity_to_natural_db"
+    ]
+  }
+}
